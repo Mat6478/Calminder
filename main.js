@@ -1,4 +1,3 @@
-
 const monthYearElement = document.getElementById('monthYear');
 const dateElement = document.getElementById('dates');
 const prevBtn = document.getElementById('prevBtn');
@@ -70,18 +69,29 @@ document.getElementById('saveEvent').addEventListener('click', () => {
     const description = document.getElementById('eventDescription').value;
 
     if (title && time) {
-        if (!events[selectedDate]) events[selectedDate] = []; // Initialize array if not present
-        events[selectedDate].push({ title, time, description });
+        const editIndex = document.getElementById('saveEvent').getAttribute('data-edit-index');
+
+        if (editIndex) {
+            // Editing an existing event
+            events[selectedDate][editIndex] = { title, time, description };
+            document.getElementById('saveEvent').removeAttribute('data-edit-index');
+        } else {
+            // Adding a new event
+            if (!events[selectedDate]) events[selectedDate] = [];
+            events[selectedDate].push({ title, time, description });
+        }
+
         saveEvents();
         updateCalendar();
         displayEvents();
-
-        document.getElementById('eventTitle').value = '';
-        document.getElementById('eventTime').value = '';
-        document.getElementById('eventDescription').value = '';
     } else {
-        alert('Please enter both title and time for the event.');
+        alert('Please enter both title and time.');
     }
+
+    // Clear the form fields after saving
+    document.getElementById('eventTitle').value = '';
+    document.getElementById('eventTime').value = '';
+    document.getElementById('eventDescription').value = '';
 });
 
 const displayEvents = () => {
@@ -118,7 +128,7 @@ const displayEvents = () => {
             // Save the index for editing
             document.getElementById('saveEvent').setAttribute('data-edit-index', index);
 
-            openModal(); // Open the modal for editing
+            eventModal.style.display = 'block';
         });
     });
 
@@ -137,104 +147,11 @@ const displayEvents = () => {
     });
 };
 
-document.querySelectorAll('.deleteEvent').forEach(button => {
-    document.addEventListener('click',(e)=> {
-        const index =
-        e.target.getAttribute('data-index');
-        events[selectedDate].splice(index,1);
-
-        if(events[selectedDate].length===0)
-            delete events[selectedDate] //remove date key if no events remain
-
-        saveEvents();
-        updateCalendar();
-        displayEvents();
-    });
-});
-
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('editEvent')) {
-        const index = e.target.getAttribute('data-index');
-        const eventsForDate = events[selectedDate] || [];
-        const eventToEdit = eventsForDate[index];
-
-        // Populate the form with existing event data
-        document.getElementById('eventTitle').value = eventToEdit.title;
-        document.getElementById('eventTime').value = eventToEdit.time;
-        document.getElementById('eventDescription').value = eventToEdit.description;
-
-        // Store the index being edited
-        document.getElementById('saveEvent').setAttribute('data-edit-index', index);
-        eventModal.style.display = 'block';
-    }
-});
-
-document.getElementById('saveEvent').addEventListener('click', () => {
-    const title = document.getElementById('eventTitle').value;
-    const time = document.getElementById('eventTime').value;
-    const description = document.getElementById('eventDescription').value;
-
-    if (!title || !time) {
-        alert('Please enter both title and time.');
-        return;
-    }
-
-    const editIndex = document.getElementById('saveEvent').getAttribute('data-edit-index');
-
-    if (editIndex) {
-        // Editing an existing event
-        events[selectedDate][editIndex] = { title, time, description };
-        document.getElementById('saveEvent').removeAttribute('data-edit-index');
-    } else {
-        // Adding a new event
-        if (!events[selectedDate]) events[selectedDate] = [];
-        events[selectedDate].push({ title, time, description });
-    }
-
-    saveEvents();
-    updateCalendar();
-    displayEvents();
-    closeModal();
-
-    // Clear the form fields after saving
-    document.getElementById('eventTitle').value = '';
-    document.getElementById('eventTime').value = '';
-    document.getElementById('eventDescription').value = '';
-});
-
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('date') && !e.target.classList.contains('inactive')) {
-        const previouslySelected = document.querySelector('.date.selected');
-        if (previouslySelected) previouslySelected.classList.remove('selected');
-
-        e.target.classList.add('selected');
-        selectedDate = e.target.getAttribute('data-date');
-
-        selectedDateElement.textContent = `Events for: ${selectedDate}`;
-        displayEvents();  // Display events for the selected date
-        eventModal.style.display = 'block';
-    }
-});
-
-
-//make it able to edit tasks
-
-
-
-
-//personal reminders
-
-//task view ability
-
-//ability to mark tasks as completed
-
-// ability to set up personal reminders
-
-
-
-document.getElementById('closeModal').addEventListener('click', () => {
+const closeModal = () => {
     eventModal.style.display = 'none';
-});
+};
+
+document.getElementById('closeModal').addEventListener('click', closeModal);
 
 prevBtn.addEventListener('click', () => {
     currentDate.setMonth(currentDate.getMonth() - 1);
