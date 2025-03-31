@@ -88,23 +88,69 @@ const displayEvents = () => {
     const eventsForDate = events[selectedDate] || [];
     eventListElement.innerHTML = '';
 
-    if (eventsForDate.length === 0) {
-        eventListElement.innerHTML = '<p>No events for this day.</p>';
-        return;
-    }
-
     eventsForDate.forEach((event, index) => {
         const eventItem = document.createElement('div');
         eventItem.classList.add('event-item');
         eventItem.innerHTML = `
-            <strong>${event.time} - ${event.title}</strong><br>
-            ${event.description} 
-            <button class= "editEvent" data-index="${index}"Edit</button>
-            <button class="deleteEvent" data-index="${index}">Delete</button> 
-        `; // delete button doesnt work
+            <div>
+                <strong>${event.time} - ${event.title}</strong><br>
+                ${event.description}
+            </div>
+            <div>
+                <button class="editEvent" data-index="${index}">Edit</button>
+                <button class="deleteEvent" data-index="${index}">Delete</button>
+            </div>
+        `;
         eventListElement.appendChild(eventItem);
     });
+
+    // Attach event listeners to edit buttons
+    document.querySelectorAll('.editEvent').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = e.target.getAttribute('data-index');
+            const event = events[selectedDate][index];
+
+            // Populate modal with existing event details
+            document.getElementById('eventTitle').value = event.title;
+            document.getElementById('eventTime').value = event.time;
+            document.getElementById('eventDescription').value = event.description;
+
+            // Save the index for editing
+            document.getElementById('saveEvent').setAttribute('data-edit-index', index);
+
+            openModal(); // Open the modal for editing
+        });
+    });
+
+    // Attach event listeners to delete buttons
+    document.querySelectorAll('.deleteEvent').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = e.target.getAttribute('data-index');
+            events[selectedDate].splice(index, 1);
+
+            if (events[selectedDate].length === 0) delete events[selectedDate]; // Remove the date key if empty
+
+            saveEvents();
+            updateCalendar();
+            displayEvents();
+        });
+    });
 };
+
+document.querySelectorAll('.deleteEvent').forEach(button => {
+    document.addEventListener('click',(e)=> {
+        const index =
+        e.target.getAttribute('data-index');
+        events[selectedDate].splice(index,1);
+
+        if(events[selectedDate].length===0)
+            delete events[selectedDate] //remove date key if no events remain
+
+        saveEvents();
+        updateCalendar();
+        displayEvents();
+    });
+});
 
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('editEvent')) {
@@ -127,28 +173,33 @@ document.getElementById('saveEvent').addEventListener('click', () => {
     const title = document.getElementById('eventTitle').value;
     const time = document.getElementById('eventTime').value;
     const description = document.getElementById('eventDescription').value;
+
+    if (!title || !time) {
+        alert('Please enter both title and time.');
+        return;
+    }
+
     const editIndex = document.getElementById('saveEvent').getAttribute('data-edit-index');
 
-    if (title && time) {
-        if (editIndex !== null) {  // Editing an existing event
-            events[selectedDate][editIndex] = { title, time, description };
-            document.getElementById('saveEvent').removeAttribute('data-edit-index');  // Clear edit index
-        } else {  // Adding a new event
-            if (!events[selectedDate]) events[selectedDate] = [];
-            events[selectedDate].push({ title, time, description });
-        }
-
-        updateCalendar();
-        displayEvents();
-        eventModal.style.display = 'none';
-
-        // Clear form
-        document.getElementById('eventTitle').value = '';
-        document.getElementById('eventTime').value = '';
-        document.getElementById('eventDescription').value = '';
+    if (editIndex) {
+        // Editing an existing event
+        events[selectedDate][editIndex] = { title, time, description };
+        document.getElementById('saveEvent').removeAttribute('data-edit-index');
     } else {
-        alert('Please enter both title and time for the event.');
+        // Adding a new event
+        if (!events[selectedDate]) events[selectedDate] = [];
+        events[selectedDate].push({ title, time, description });
     }
+
+    saveEvents();
+    updateCalendar();
+    displayEvents();
+    closeModal();
+
+    // Clear the form fields after saving
+    document.getElementById('eventTitle').value = '';
+    document.getElementById('eventTime').value = '';
+    document.getElementById('eventDescription').value = '';
 });
 
 document.addEventListener('click', (e) => {
@@ -165,9 +216,15 @@ document.addEventListener('click', (e) => {
     }
 });
 
+
+//make it able to edit tasks
+
+
+
+
 //personal reminders
 
-//task view ability to edit existing tasks
+//task view ability
 
 //ability to mark tasks as completed
 
