@@ -308,5 +308,51 @@ body {
     border: 2px solid #ffa726;
     color: black;
 }
+/* Completed Event Styling */
+.event-item.completed {
+    background-color: #d4edda; /* Light green background */
+    opacity: 0.7;
+    text-decoration: line-through;
+    color: #333;
+}
+
+.event-item.completed strong {
+    text-decoration: line-through;
+}
+
+.event-item input[type="checkbox"] {
+    margin-right: 8px;
+    transform: scale(1.2);
+    cursor: pointer;
+}
+.tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #f1f1f1;
+    border: none;
+    outline: none;
+    margin-right: 20px;
+}
+
+.tab.active {
+    background-color: #4CAF50; /* Green for active tab */
+    color: white;
+}
+
+.event-item {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+.event-item.completed {
+    background-color: #f4f4f4;
+}
+
+.completed {
+    text-decoration: line-through;
+    color: gray;
+}
+
 
 updateCalendar();
