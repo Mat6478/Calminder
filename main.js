@@ -90,6 +90,7 @@ document.getElementById('saveEvent').addEventListener('click', () => {
     const title = document.getElementById('eventTitle').value;
     const time = document.getElementById('eventTime').value;
     const description = document.getElementById('eventDescription').value;
+    const category = document.getElementById('eventCategory').value;
 
     if (title && time) {
         const editIndex = document.getElementById('saveEvent').getAttribute('data-edit-index');
@@ -100,13 +101,14 @@ document.getElementById('saveEvent').addEventListener('click', () => {
                 ...events[selectedDate][editIndex],
                 title,
                 time,
-                description
+                description,
+                category
             };
             document.getElementById('saveEvent').removeAttribute('data-edit-index');
         } else {
             // Adding a new event
             if (!events[selectedDate]) events[selectedDate] = [];
-            events[selectedDate].push({ title, time, description, completed: false });
+            events[selectedDate].push({ title, time, description, category, completed: false });
         }
 
         saveEvents();
@@ -120,6 +122,7 @@ document.getElementById('saveEvent').addEventListener('click', () => {
     document.getElementById('eventTitle').value = '';
     document.getElementById('eventTime').value = '';
     document.getElementById('eventDescription').value = '';
+    document.getElementById('eventCategory').value = '';
 });
 
 // Display events for selected date
@@ -133,6 +136,7 @@ const displayEvents = () => {
         eventsToDisplay = eventsForDate.map((event, index) => ({
             ...event,
             date: selectedDate,
+            eventCategory,
             index
         })).filter(event => !event.completed);
     } else {
@@ -161,21 +165,30 @@ const displayEvents = () => {
         if (event.completed) eventItem.classList.add('completed');
 
         eventItem.innerHTML = `
-            <div>
-                <input type="checkbox" class="completeEvent" data-index="${event.index}" data-date="${event.date}" ${event.completed ? 'checked' : ''}>
-                <strong style="text-decoration: ${event.completed ? 'line-through' : 'none'}">
-                    ${event.time} - ${event.title}
-                </strong><br>
-                <span style="text-decoration: ${event.completed ? 'line-through' : 'none'}">
-                    ${event.description}
-                </span>
-                <div><small>${event.date}</small></div>
-            </div>
-            <div>
-                <button class="editEvent" data-index="${event.index}" data-date="${event.date}" ${currentTab === 'completed' ? 'disabled' : ''}>Edit</button>
-                <button class="deleteEvent" data-index="${event.index}" data-date="${event.date}">Delete</button>
-            </div>
-        `;
+    <div>
+        <div>
+            <input type="checkbox" class="completeEvent" data-index="${event.index}" data-date="${event.date}" ${event.completed ? 'checked' : ''}>
+            <strong style="text-decoration: ${event.completed ? 'line-through' : 'none'}">
+                ${event.time} - ${event.title}
+            </strong>
+        </div>
+        <div style="text-decoration: ${event.completed ? 'line-through' : 'none'}">
+            Description: ${event.description}
+        </div>
+        <div style="text-decoration: ${event.completed ? 'line-through' : 'none'}">
+            Category: ${event.category}
+        </div>
+        <div>
+            <small>${event.date}</small>
+        </div>
+    </div>
+    <div style="text-align: right; margin-top: 5px;">
+        <button class="editEvent" data-index="${event.index}" data-date="${event.date}" ${currentTab === 'completed' ? 'disabled' : ''}>Edit</button>
+        <button class="deleteEvent" data-index="${event.index}" data-date="${event.date}">Delete</button>
+    </div>
+`;
+
+
 
         eventListElement.appendChild(eventItem);
     });
@@ -191,6 +204,7 @@ const displayEvents = () => {
             document.getElementById('eventTitle').value = event.title;
             document.getElementById('eventTime').value = event.time;
             document.getElementById('eventDescription').value = event.description;
+            document.getElementById('eventCategory').value = event.category;
 
             document.getElementById('saveEvent').setAttribute('data-edit-index', index);
             eventModal.style.display = 'block';
@@ -263,3 +277,4 @@ completedTab.addEventListener('click', () => {
 
 // Initialize calendar
 updateCalendar();
+displayEvents();
