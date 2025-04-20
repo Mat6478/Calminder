@@ -1,280 +1,169 @@
-const monthYearElement = document.getElementById('monthYear');
-const dateElement = document.getElementById('dates');
-const prevBtn = document.getElementById('prevBtn');
-const nextBtn = document.getElementById('nextBtn');
+
+// Supabase configuration
+const SUPABASE_URL = 'https://kbpubtadcwukqubwhmge.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImticHVidGFkY3d1a3F1YndobWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1Mjc3NjcsImV4cCI6MjA1OTEwMzc2N30.0__aQKfomiltnoLLKUH_KhfK7IgtlZ0JezZBrvwNpRI';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const monthYearText = document.getElementById('monthYear');
+const datesContainer = document.getElementById('dates');
+const selectedDateText = document.getElementById('selectedDate');
+const selectedDateDisplay = document.getElementById('selectedDateDisplay');
 const eventModal = document.getElementById('eventModal');
-const selectedDateElement = document.getElementById('selectedDate');
-const eventListElement = document.getElementById('eventList');
+const eventTitle = document.getElementById('eventTitle');
+const eventTime = document.getElementById('eventTime');
+const eventDescription = document.getElementById('eventDescription');
+const eventCategory = document.getElementById('eventCategory');
+const saveEventBtn = document.getElementById('saveEvent');
+const closeModal = document.getElementById('closeModal');
+const eventList = document.getElementById('eventList');
 const activeTab = document.getElementById('activeTab');
 const completedTab = document.getElementById('completedTab');
 
 let currentDate = new Date();
-let selectedDate = null;
-let events = JSON.parse(localStorage.getItem('events')) || {}; // Load events from localStorage
-let currentTab = 'active'; // Track the current tab (either 'active' or 'completed')
+let selectedDate = '';
+let allEvents = [];
+let showingCompleted = false;
+let currentUser = 'demo_user'; // Replace with actual logged-in username if needed
 
-// Update calendar
-const updateCalendar = () => {
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth();
+function renderCalendar(date) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
 
-    const firstDay = new Date(currentYear, currentMonth, 1);
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
-    const totalDays = lastDay.getDate();
-    const firstDayIndex = firstDay.getDay();
-    const lastDayIndex = lastDay.getDay();
+  monthYearText.textContent = `${date.toLocaleString('default', {
+    month: 'long'
+  })} ${year}`;
 
-    const monthYearString = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-    monthYearElement.textContent = monthYearString;
+  datesContainer.innerHTML = '';
 
-    let datesHTML = '';
+  const start = (firstDay + 6) % 7;
+  for (let i = 0; i < start; i++) {
+    const empty = document.createElement('div');
+    datesContainer.appendChild(empty);
+  }
 
-    for (let i = 0; i < firstDayIndex; i++) {
-        datesHTML += `<div class="date inactive"></div>`;
-    }
-
-    for (let i = 1; i <= totalDays; i++) {
-        const date = new Date(currentYear, currentMonth, i);
-        const formattedDate = date.toISOString().split('T')[0];
-        let activeClass = '';
-if (date.toDateString() === new Date().toDateString()) {
-    activeClass = 'active'; // Highlight today's date
+  for (let i = 1; i <= lastDate; i++) {
+    const dateDiv = document.createElement('div');
+    dateDiv.classList.add('date');
+    const fullDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    dateDiv.dataset.date = fullDate;
+    dateDiv.textContent = i;
+    dateDiv.addEventListener('click', () => openModal(fullDate));
+    datesContainer.appendChild(dateDiv);
+  }
 }
-if (selectedDate && date.toISOString().split('T')[0] === selectedDate) {
-    activeClass += ' selected'; // Highlight selected date if visible
+
+function openModal(date) {
+  selectedDate = date;
+  selectedDateText.textContent = `Selected Date: ${date}`;
+  selectedDateDisplay.textContent = `Selected Date: ${date}`;
+  eventTitle.value = '';
+  eventTime.value = '';
+  eventDescription.value = '';
+  eventCategory.value = '';
+  eventModal.style.display = 'block';
 }
 
-        const hasEvent = events[formattedDate] && events[formattedDate].length > 0 ? 'has-event' : '';
+function closeModalFunc() {
+  eventModal.style.display = 'none';
+}
 
-        datesHTML += `<div class="date ${activeClass} ${hasEvent}" data-date="${formattedDate}">${i}</div>`;
-    }
+closeModal.addEventListener('click', closeModalFunc);
 
-    for (let i = lastDayIndex; i < 6; i++) {
-        datesHTML += `<div class="date inactive"></div>`;
-    }
+saveEventBtn.addEventListener('click', async () => {
+  const newEvent = {
+    title: eventTitle.value,
+    description: eventDescription.value,
+    category: eventCategory.value,
+    due_date: selectedDate,
+    completed: false,
+    Username: currentUser
+  };
 
-    dateElement.innerHTML = datesHTML;
-};
+  const { data, error } = await db
+    .from('Tasks')
+    .insert([newEvent])
+    .select(); 
 
-// Save events to localStorage
-const saveEvents = () => {
-    localStorage.setItem('events', JSON.stringify(events));
-};
+  if (error) {
+    console.error('Insert error:', error);
+  } else if (data && data.length > 0) {
+    console.log('Event saved:', data);
+    allEvents.push(data[0]);
+    renderEventList();
+  } else {
+    console.warn('Insert succeeded but returned no data.');
+  }
 
-// Handle date selection and display event modal
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('date') && !e.target.classList.contains('inactive')) {
-        const previouslySelected = document.querySelector('.date.selected');
-        if (previouslySelected) previouslySelected.classList.remove('selected');
-
-        e.target.classList.add('selected');
-        selectedDate = e.target.getAttribute('data-date');
-
-        selectedDateElement.textContent = `Events for: ${selectedDate}`;
-        const selectedDateDisplay = document.getElementById('selectedDateDisplay');
-const readableDate = new Date(selectedDate).toLocaleDateString(undefined, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-});
-selectedDateDisplay.textContent = `Selected Date: ${readableDate}`;
-
-        displayEvents();
-        eventModal.style.display = 'block';
-    }
+  closeModalFunc();
 });
 
-// Save event (either new or edited)
-document.getElementById('saveEvent').addEventListener('click', () => {
-    const title = document.getElementById('eventTitle').value;
-    const time = document.getElementById('eventTime').value;
-    const description = document.getElementById('eventDescription').value;
-    const category = document.getElementById('eventCategory').value;
 
-    if (title && time) {
-        const editIndex = document.getElementById('saveEvent').getAttribute('data-edit-index');
-
-        if (editIndex) {
-            // Editing an existing event
-            events[selectedDate][editIndex] = {
-                ...events[selectedDate][editIndex],
-                title,
-                time,
-                description,
-                category
-            };
-            document.getElementById('saveEvent').removeAttribute('data-edit-index');
-        } else {
-            // Adding a new event
-            if (!events[selectedDate]) events[selectedDate] = [];
-            events[selectedDate].push({ title, time, description, category, completed: false });
-        }
-
-        saveEvents();
-        updateCalendar();
-        displayEvents();
-    } else {
-        alert('Please enter both title and time.');
-    }
-
-    // Clear the form fields after saving
-    document.getElementById('eventTitle').value = '';
-    document.getElementById('eventTime').value = '';
-    document.getElementById('eventDescription').value = '';
-    document.getElementById('eventCategory').value = '';
-});
-
-// Display events for selected date
-const displayEvents = () => {
-    eventListElement.innerHTML = '';
-
-    let eventsToDisplay = [];
-
-    if (currentTab === 'active') {
-        const eventsForDate = events[selectedDate] || [];
-        eventsToDisplay = eventsForDate.map((event, index) => ({
-            ...event,
-            date: selectedDate,
-            eventCategory,
-            index
-        })).filter(event => !event.completed);
-    } else {
-        // Show all completed events across all dates
-        for (const [date, dateEvents] of Object.entries(events)) {
-            dateEvents.forEach((event, index) => {
-                if (event.completed) {
-                    eventsToDisplay.push({
-                        ...event,
-                        date,
-                        index
-                    });
-                }
-            });
-        }
-    }
-
-    if (eventsToDisplay.length === 0) {
-        eventListElement.innerHTML = `<p>No ${currentTab} events found.</p>`;
-        return;
-    }
-
-    eventsToDisplay.forEach((event) => {
-        const eventItem = document.createElement('div');
-        eventItem.classList.add('event-item');
-        if (event.completed) eventItem.classList.add('completed');
-
-        eventItem.innerHTML = `
-    <div>
-        <div>
-            <input type="checkbox" class="completeEvent" data-index="${event.index}" data-date="${event.date}" ${event.completed ? 'checked' : ''}>
-            <strong style="text-decoration: ${event.completed ? 'line-through' : 'none'}">
-                ${event.time} - ${event.title}
-            </strong>
-        </div>
-        <div style="text-decoration: ${event.completed ? 'line-through' : 'none'}">
-            Description: ${event.description}
-        </div>
-        <div style="text-decoration: ${event.completed ? 'line-through' : 'none'}">
-            Category: ${event.category}
-        </div>
-        <div>
-            <small>${event.date}</small>
-        </div>
-    </div>
-    <div style="text-align: right; margin-top: 5px;">
-        <button class="editEvent" data-index="${event.index}" data-date="${event.date}" ${currentTab === 'completed' ? 'disabled' : ''}>Edit</button>
-        <button class="deleteEvent" data-index="${event.index}" data-date="${event.date}">Delete</button>
-    </div>
-`;
-
-
-
-        eventListElement.appendChild(eventItem);
+function renderEventList() {
+  eventList.innerHTML = '';
+  const filtered = allEvents.filter(e => (e.completed || false) === showingCompleted);
+  filtered.forEach(e => {
+    const item = document.createElement('div');
+    item.classList.add('event-item');
+    item.innerHTML = `<strong>${e.title}</strong> (${e.due_date})<br>${e.description || ''}`;
+    item.addEventListener('click', async () => {
+      const updated = !e.completed;
+      await db.from('Tasks').update({ completed: updated }).eq('Task_ID', e.Task_ID);
+      e.completed = updated;
+      renderEventList();
     });
+    eventList.appendChild(item);
+  });
+}
 
+async function fetchEvents() {
+  const { data, error } = await db.from('Tasks').select('*').eq('Username', currentUser);
+  if (error) {
+    console.error('Fetch error:', error);
+  } else {
+    allEvents = data.map(task => ({
+      Task_ID: task.Task_ID,
+      title: task.title,
+      description: task.description,
+      category: task.category,
+      due_date: task.due_date,
+      completed: task.completed,
+      Username: task.Username
+    }));
+    renderEventList();
+  }
+}
 
-    document.querySelectorAll('.editEvent').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const index = e.target.getAttribute('data-index');
-            const date = e.target.getAttribute('data-date');
-            const event = events[date][index];
-
-            selectedDate = date; // Update selectedDate context
-            document.getElementById('eventTitle').value = event.title;
-            document.getElementById('eventTime').value = event.time;
-            document.getElementById('eventDescription').value = event.description;
-            document.getElementById('eventCategory').value = event.category;
-
-            document.getElementById('saveEvent').setAttribute('data-edit-index', index);
-            eventModal.style.display = 'block';
-        });
-    });
-
-    document.querySelectorAll('.deleteEvent').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const index = e.target.getAttribute('data-index');
-            const date = e.target.getAttribute('data-date');
-            events[date].splice(index, 1);
-
-            if (events[date].length === 0) delete events[date];
-
-            saveEvents();
-            updateCalendar();
-            displayEvents();
-        });
-    });
-
-    document.querySelectorAll('.completeEvent').forEach(checkbox => {
-        checkbox.addEventListener('change', (e) => {
-            const index = e.target.getAttribute('data-index');
-            const date = e.target.getAttribute('data-date');
-            const event = events[date][index];
-
-            event.completed = e.target.checked;
-
-            saveEvents();
-            updateCalendar();
-            displayEvents(); // Refresh the view
-        });
-    });
-};
-
-
-// Close event modal
-const closeModal = () => {
-    eventModal.style.display = 'none';
-};
-
-document.getElementById('closeModal').addEventListener('click', closeModal);
-
-// Navigate to previous month
-prevBtn.addEventListener('click', () => {
-    currentDate.setMonth(currentDate.getMonth() - 1);
-    updateCalendar();
+document.getElementById('prevBtn').addEventListener('click', () => {
+  currentDate.setMonth(currentDate.getMonth() - 1);
+  renderCalendar(currentDate);
 });
 
-// Navigate to next month
-nextBtn.addEventListener('click', () => {
-    currentDate.setMonth(currentDate.getMonth() + 1);
-    updateCalendar();
+document.getElementById('nextBtn').addEventListener('click', () => {
+  currentDate.setMonth(currentDate.getMonth() + 1);
+  renderCalendar(currentDate);
 });
 
-// Switch between active and completed tasks
 activeTab.addEventListener('click', () => {
-    currentTab = 'active';
-    activeTab.classList.add('active');
-    completedTab.classList.remove('active');
-    displayEvents(); // Re-display events when switching tabs
+  showingCompleted = false;
+  activeTab.classList.add('active');
+  completedTab.classList.remove('active');
+  renderEventList();
 });
 
 completedTab.addEventListener('click', () => {
-    currentTab = 'completed';
-    completedTab.classList.add('active');
-    activeTab.classList.remove('active');
-    displayEvents(); // Re-display events when switching tabs
+  showingCompleted = true;
+  completedTab.classList.add('active');
+  activeTab.classList.remove('active');
+  renderEventList();
 });
 
-// Initialize calendar
-updateCalendar();
-displayEvents();
+window.addEventListener('click', e => {
+  if (e.target === eventModal) {
+    closeModalFunc();
+  }
+});
+
+renderCalendar(currentDate);
+fetchEvents();
