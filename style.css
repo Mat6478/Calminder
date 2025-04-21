@@ -181,15 +181,21 @@ body {
 .has-event:hover {
     background-color: #ffd54f;
 }
-.date.has-event {
-    background-color: #ffeb3b; /* Yellow background to indicate event */
-    border: 2px solid #ffa726;
-    color: black;
-}
 
-.date.has-event:hover {
-    background-color: #ffd54f;
-}
+
+/* Highlight dates that have events (tasks) */
+.date.has-event {
+    background-color: #ffeb3b; /* Yellow background for dates with tasks */
+    color: black;
+    border: 2px solid #ffa726; /* Optional: Add border to make it more noticeable */
+  }
+  
+  .date.has-event:hover {
+    background-color: #ffd54f; /* Lighten the color on hover */
+    cursor: pointer;
+  }
+  
+  
 
 /* Event modal styles */
 #eventModal {
@@ -205,8 +211,17 @@ body {
 }
 
 .event-item {
-    margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  display: flex;
+  flex-direction: column; /* Stack vertically */
+  align-items: flex-start; /* Align text to the left */
+  background-color: #f0f0f0;
+  border-radius: 6px;
+  margin-bottom: 10px;
 }
+
+  
 
 .event-item button {
     margin-left: 10px;
@@ -277,12 +292,13 @@ body {
 }
 
 #eventList {
-    max-height: 200px;
-    overflow-y: auto;
-    margin-top: 10px;
-    border-top: 1px solid #ddd;
-    padding-top: 10px;
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 10px;
+  border-top: 1px solid #ddd;
+  padding-top: 10px;
 }
+
 
 .event-item {
     padding: 6px;
@@ -303,11 +319,6 @@ body {
     cursor: pointer;
 }
 
-.date.has-event {
-    background-color: #ffeb3b;
-    border: 2px solid #ffa726;
-    color: black;
-}
 /* Completed Event Styling */
 .event-item.completed {
     background-color: #d4edda; /* Light green background */
@@ -352,4 +363,51 @@ body {
 .completed {
     text-decoration: line-through;
     color: gray;
+}
+
+.main-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px;
+  }
+  
+  #taskContainer {
+    width: 250px;
+    height: calc(100vh - 300px); /* Make it tall but leave room for padding/margins */
+    overflow-y: auto;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .event-item .delete-btn {
+    background-color: #dc3545; /* Red color */
+    color: white;
+    border: none;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    margin-left: 10px;
+}
+
+.event-item .delete-btn:hover {
+    background-color: #c82333;
+}
+
+#createTaskButton {
+    background-color: #4f43bd;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 30%;
+    margin-right: 10px; /* Or your preferred spacing */
+    display: none; /* Initially hide the button */
 }
