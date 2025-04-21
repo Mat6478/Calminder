@@ -354,5 +354,25 @@ body {
     color: gray;
 }
 
+.date.all-completed::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: green;
+    border-radius: 50%;
+    display: block;
+    margin-top: 2px;
+}
+
+.date.some-completed::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: orange;
+    border-radius: 50%;
+    display: block;
+    margin-top: 2px;
+}
+
 
 updateCalendar();
