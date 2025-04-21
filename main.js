@@ -1,4 +1,3 @@
-
 // Supabase configuration
 const SUPABASE_URL = 'https://kbpubtadcwukqubwhmge.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImticHVidGFkY3d1a3F1YndobWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1Mjc3NjcsImV4cCI6MjA1OTEwMzc2N30.0__aQKfomiltnoLLKUH_KhfK7IgtlZ0JezZBrvwNpRI';
@@ -23,18 +22,21 @@ let currentDate = new Date();
 let selectedDate = '';
 let allEvents = [];
 let showingCompleted = false;
-let currentUser = 'demo_user'; // Replace with actual logged-in username if needed
+let currentUser = localStorage.getItem('loggedInUser'); // Fetch logged-in user from localStorage
 
+// Redirect to login if no user is logged in
+if (!currentUser) {
+  window.location.href = 'index.html'; // Redirect to index.html (login page)
+}
+
+// Render calendar for the given date
 function renderCalendar(date) {
   const year = date.getFullYear();
   const month = date.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const lastDate = new Date(year, month + 1, 0).getDate();
 
-  monthYearText.textContent = `${date.toLocaleString('default', {
-    month: 'long'
-  })} ${year}`;
-
+  monthYearText.textContent = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
   datesContainer.innerHTML = '';
 
   const start = (firstDay + 6) % 7;
@@ -54,6 +56,7 @@ function renderCalendar(date) {
   }
 }
 
+// Open the event modal to create a new event
 function openModal(date) {
   selectedDate = date;
   selectedDateText.textContent = `Selected Date: ${date}`;
@@ -65,12 +68,14 @@ function openModal(date) {
   eventModal.style.display = 'block';
 }
 
+// Close the modal
 function closeModalFunc() {
   eventModal.style.display = 'none';
 }
 
 closeModal.addEventListener('click', closeModalFunc);
 
+// Save the new event to Supabase
 saveEventBtn.addEventListener('click', async () => {
   const newEvent = {
     title: eventTitle.value,
@@ -84,7 +89,7 @@ saveEventBtn.addEventListener('click', async () => {
   const { data, error } = await db
     .from('Tasks')
     .insert([newEvent])
-    .select(); 
+    .select();
 
   if (error) {
     console.error('Insert error:', error);
@@ -99,7 +104,7 @@ saveEventBtn.addEventListener('click', async () => {
   closeModalFunc();
 });
 
-
+// Render the list of events
 function renderEventList() {
   eventList.innerHTML = '';
   const filtered = allEvents.filter(e => (e.completed || false) === showingCompleted);
@@ -117,6 +122,7 @@ function renderEventList() {
   });
 }
 
+// Fetch events from Supabase for the logged-in user
 async function fetchEvents() {
   const { data, error } = await db.from('Tasks').select('*').eq('Username', currentUser);
   if (error) {
@@ -132,9 +138,9 @@ async function fetchEvents() {
       Username: task.Username
     }));
     renderEventList();
-  }
 }
 
+// Handle the previous and next buttons for calendar navigation
 document.getElementById('prevBtn').addEventListener('click', () => {
   currentDate.setMonth(currentDate.getMonth() - 1);
   renderCalendar(currentDate);
@@ -145,12 +151,14 @@ document.getElementById('nextBtn').addEventListener('click', () => {
   renderCalendar(currentDate);
 });
 
+// Handle the active/completed tab switching
 activeTab.addEventListener('click', () => {
   showingCompleted = false;
   activeTab.classList.add('active');
   completedTab.classList.remove('active');
   renderEventList();
 });
+}
 
 completedTab.addEventListener('click', () => {
   showingCompleted = true;
@@ -159,11 +167,23 @@ completedTab.addEventListener('click', () => {
   renderEventList();
 });
 
+// Close modal when clicked outside the modal area
 window.addEventListener('click', e => {
   if (e.target === eventModal) {
     closeModalFunc();
   }
 });
 
-renderCalendar(currentDate);
-fetchEvents();
+// Ensure the user is logged in before rendering events
+if (!currentUser) {
+  window.location.href = 'index.html'; // Redirect to login if not logged in
+} else {
+  renderCalendar(currentDate);
+  fetchEvents(); // Fetch events for the logged-in user
+}
+
+const logoutBtn = document.getElementById('logoutBtn');
+logoutBtn.addEventListener('click', () => {
+  localStorage.removeItem('loggedInUser'); // or 'currentUser', depending on what you used
+  window.location.href = 'index.html'; // Redirect to login
+});

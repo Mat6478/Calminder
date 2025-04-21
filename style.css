@@ -353,3 +353,14 @@ body {
     text-decoration: line-through;
     color: gray;
 }
+
+.logout-button {
+    margin: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
