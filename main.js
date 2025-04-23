@@ -3,6 +3,12 @@ const SUPABASE_URL = 'https://kbpubtadcwukqubwhmge.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImticHVidGFkY3d1a3F1YndobWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1Mjc3NjcsImV4cCI6MjA1OTEwMzc2N30.0__aQKfomiltnoLLKUH_KhfK7IgtlZ0JezZBrvwNpRI';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Ask for browser notification permission when page loads
+if ('Notification' in window && Notification.permission !== 'granted') {
+    Notification.requestPermission();
+}
+
+
 const usernamePrompt = document.getElementById('usernamePrompt');
 const usernameInput = document.getElementById('usernameInput');
 const usernameSubmit = document.getElementById('usernameSubmit');
@@ -14,6 +20,12 @@ const eventModal = document.getElementById('eventModal');
 const eventTitle = document.getElementById('eventTitle');
 const eventDescription = document.getElementById('eventDescription');
 const eventCategory = document.getElementById('eventCategory');
+//const reminderTimeInput = document.getElementById('reminderTime');
+const customReminderCheck = document.getElementById('customReminderCheck');
+const customReminderTime = document.getElementById('customReminderTime');
+customReminderCheck.addEventListener('change', () => {
+  customReminderTime.disabled = !customReminderCheck.checked;
+});
 const saveEventBtn = document.getElementById('saveEvent');
 const closeModal = document.getElementById('closeModal');
 const eventList = document.getElementById('eventList');
@@ -80,33 +92,35 @@ usernameSubmit.addEventListener('click', async () => { // Make the event listene
 });
 
 function renderEventList() {
-  eventList.innerHTML = '';
+    eventList.innerHTML = '';
 
-  const filtered = allEvents.filter(e => (e.completed || false) === showingCompleted);
+    const filtered = allEvents.filter(e => (e.completed || false) === showingCompleted);
 
-  filtered.forEach(e => {
-      const item = document.createElement('div');
-      item.classList.add('event-item');
-      if (e.completed) {
-          item.classList.add('completed');
-      }
+    filtered.forEach(e => {
+        const item = document.createElement('div');
+        item.classList.add('event-item');
+        if (e.completed) {
+            item.classList.add('completed');
+        }
 
-      // Format date
-      const dueDate = new Date(e.due_date);
-      const dateStr = dueDate.toLocaleDateString();
+        // Format date
+        const dueDate = new Date(e.due_date);
+        const dateStr = dueDate.toLocaleDateString();
 
-      // Build the HTML with new buttons
-      item.innerHTML = `
-          <strong>${e.title}</strong><br>
-          Description: ${e.description || 'None'}<br>
-          Category: ${e.category || 'Uncategorized'}<br>
-          Date: ${dateStr}<br>
-          <div class="event-buttons">
-              <button class="edit-btn" data-task-id="${e.Task_ID}">Edit</button>
-              <button class="complete-btn" data-task-id="${e.Task_ID}">${e.completed ? 'Uncomplete' : 'Complete'}</button>
-              <button class="delete-btn" data-task-id="${e.Task_ID}">Delete</button>
-          </div>
-      `;
+        // Build the HTML
+        item.innerHTML = `
+            <strong>${e.title || 'Unnamed'}</strong><br>
+            <div class="event-details">
+                <p class="event-description">Description: ${e.description || 'None'}</p>
+                <p class="event-category">Category: ${e.category || 'Uncategorized'}</p>
+                <p class="event-date">Date: ${dateStr}</p>
+            </div>
+            <div class="event-buttons">
+                <button class="edit-btn" data-task-id="${e.Task_ID}">Edit</button>
+                <button class="complete-btn" data-task-id="${e.Task_ID}">${e.completed ? 'Uncomplete' : 'Complete'}</button>
+                <button class="more-info-btn" data-task-id="${e.Task_ID}">More Info</button>
+            </div>
+        `;
 
       // Event listener for the Complete button
       const completeButton = item.querySelector('.complete-btn');
@@ -123,61 +137,59 @@ function renderEventList() {
           }
       });
 
-      // Event listener for the Delete button
-      const deleteButton = item.querySelector('.delete-btn');
-      deleteButton.addEventListener('click', async (event) => {
-          event.stopPropagation();
-          const taskIdToDelete = event.target.dataset.taskId;
-          await deleteTask(taskIdToDelete);
-      });
-
       // Event listener for the Edit button
       const editButton = item.querySelector('.edit-btn');
-      editButton.addEventListener('click', async (event) => {
-          event.stopPropagation();
-          const taskIdToEdit = event.target.dataset.taskId;
-          const taskToEdit = allEvents.find(task => task.Task_ID === taskIdToEdit);
-          if (taskToEdit) {
-              openModalForEdit(taskToEdit);
-          }
-      });
+        editButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const taskIdToEdit = event.target.dataset.taskId;
+            showTaskDetails(taskIdToEdit, true); // Pass true to enable edit mode
+        });
 
-      eventList.appendChild(item);
-  });
+        // (New) Event listener for the "More Info" button
+        const moreInfoButton = item.querySelector('.more-info-btn');
+        moreInfoButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const taskId = event.target.dataset.taskId;
+            showTaskDetails(taskId, false); // Pass false for view-only mode
+        });
+        
+        eventList.appendChild(item);
+    });
+
 }
 
 function openModal(date) {
-  selectedDate = date;
-  document.getElementById('selectedDate').textContent = `Selected Date: ${selectedDate}`; // Corrected ID
-  eventTitle.value = '';
-  eventDescription.value = '';
-  eventCategory.value = '';
-  recurringCheckbox.checked = false;
-  recurringOptionsDiv.style.display = 'none';
-  document.getElementById('modalTitle').textContent = 'Add Event';
-  document.getElementById('saveEvent').textContent = 'Save Event';
-  document.getElementById('deleteEvent').style.display = 'none';
-  document.getElementById('deleteEvent').dataset.taskId = '';
-  eventModal.style.display = 'block';
+    selectedDate = date;
+    document.getElementById('selectedDate').textContent = `Selected Date: ${selectedDate}`; // Corrected ID
+    eventTitle.value = '';
+    eventDescription.value = '';
+    eventCategory.value = '';
+    recurringCheckbox.checked = false;
+    recurringOptionsDiv.style.display = 'none';
+    document.getElementById('modalTitle').textContent = 'Add Event';
+    document.getElementById('saveEvent').textContent = 'Save Event';
+    document.getElementById('deleteEvent').style.display = 'none'; // Ensure delete button is hidden in create mode
+    document.getElementById('deleteEvent').dataset.taskId = '';
+    eventModal.style.display = 'block';
 }
 
-function openModalForEdit(task) {
-  selectedDate = task.due_date;
-  document.getElementById('selectedDate').textContent = `Selected Date: ${selectedDate}`; // Corrected ID
-  eventTitle.value = task.title;
-  eventDescription.value = task.description || '';
-  eventCategory.value = task.category || '';
-  recurringCheckbox.checked = task.recurring || false;
-  recurringOptionsDiv.style.display = recurringCheckbox.checked ? 'block' : 'none';
-  if (task.recurring) {
-      document.getElementById('recurringPattern').value = task.recurring_pattern || 'weekly';
-  }
-  document.getElementById('modalTitle').textContent = 'Edit Task';
-  document.getElementById('saveEvent').textContent = 'Save Changes';
-  document.getElementById('deleteEvent').style.display = 'inline-block';
-  document.getElementById('deleteEvent').dataset.taskId = task.Task_ID;
-  eventModal.style.display = 'block';
-}
+// function openModalForEdit(task) {
+//     selectedDate = task.due_date;
+//     document.getElementById('selectedDate').textContent = `Selected Date: ${selectedDate}`; // Corrected ID
+//     eventTitle.value = task.title;
+//     eventDescription.value = task.description || '';
+//     eventCategory.value = task.category || '';
+//     recurringCheckbox.checked = task.recurring || false;
+//     recurringOptionsDiv.style.display = recurringCheckbox.checked ? 'block' : 'none';
+//     if (task.recurring) {
+//         document.getElementById('recurringPattern').value = task.recurring_pattern || 'weekly';
+//     }
+//     document.getElementById('modalTitle').textContent = 'Edit Task';
+//     document.getElementById('saveEvent').textContent = 'Save Changes';
+//     document.getElementById('deleteEvent').style.display = 'inline-block';
+//     document.getElementById('deleteEvent').dataset.taskId = task.Task_ID;
+//     eventModal.style.display = 'block';
+// }
 
 closeModal.addEventListener('click', () => {
   eventModal.style.display = 'none';
@@ -195,6 +207,20 @@ async function saveNewOrEditedEvent() {
   if (!currentUser) return;
   const isRecurring = recurringCheckbox.checked;
   const pattern = isRecurring ? document.getElementById('recurringPattern').value : null;
+
+  // Collect selected preset reminders
+const reminderOptions = [...document.querySelectorAll('input[name="reminder"]:checked')].map(input => parseInt(input.value));
+
+// Handle custom reminder
+const reminders = reminderOptions.map(daysBefore => {
+  const reminderDate = new Date(selectedDate);
+  reminderDate.setDate(reminderDate.getDate() - daysBefore);
+  return reminderDate.toISOString();
+});
+
+if (customReminderCheck.checked && customReminderTime.value) {
+  reminders.push(new Date(customReminderTime.value).toISOString());
+}
 
   const updatedTask = {
       title: eventTitle.value,
@@ -242,6 +268,13 @@ async function saveNewOrEditedEvent() {
           allEvents.push(data[0]);
           renderEventList();
           renderCalendar(currentDate);
+          const insertedTaskId = data[0].Task_ID;
+          const reminderRows = reminders.map(time => ({
+          Task_ID: insertedTaskId,
+          reminder_time: time
+}));
+await db.from('Reminders').insert(reminderRows);
+
       } else {
           console.warn('Insert succeeded but returned no data.');
       }
@@ -251,20 +284,59 @@ async function saveNewOrEditedEvent() {
 }
 
 async function deleteTask(taskId) {
-  if (!currentUser) return;
-  const { error } = await db
-      .from('Tasks')
-      .delete()
-      .eq('Task_ID', taskId);
+    if (!currentUser || !taskId) return;
 
-  if (error) {
-      console.error('Delete error:', error);
-  } else {
-      console.log('Task deleted:', taskId);
-      allEvents = allEvents.filter(event => event.Task_ID !== taskId);
-      renderEventList();
-      renderCalendar(currentDate);
-  }
+    // First, get the file URL associated with the task (if any)
+    const { data: taskData, error: fetchError } = await db
+        .from('Tasks')
+        .select('file_url')
+        .eq('Task_ID', taskId)
+        .single();
+
+    if (fetchError) {
+        console.error('Error fetching task file URL:', fetchError);
+        alert('Error deleting task.');
+        return;
+    }
+
+    // Delete the task from the database
+    const { error: deleteError } = await db
+        .from('Tasks')
+        .delete()
+        .eq('Task_ID', taskId);
+
+    if (deleteError) {
+        console.error('Delete error:', deleteError);
+        alert('Failed to delete task.');
+    } else {
+        console.log('Task deleted:', taskId);
+        // Remove the task from the allEvents array
+        allEvents = allEvents.filter(task => task.Task_ID !== taskId);
+        renderEventList();
+        renderCalendar(currentDate);
+        taskDetailsContent.innerHTML = '';
+        taskDetailsSection.style.display = 'none';
+
+        // If a file URL exists, delete the file from Supabase Storage
+        if (taskData && taskData.file_url) {
+            const bucketName = 'files'; // Replace with your bucket name
+            const filePathToDelete = taskData.file_url.split(`${SUPABASE_URL}/storage/v1/object/public/${bucketName}/`)[1];
+
+            if (filePathToDelete) {
+                const { error: storageError } = await db
+                    .storage
+                    .from(bucketName)
+                    .remove([filePathToDelete]); // Pass an array of paths
+
+                if (storageError) {
+                    console.error('Error deleting file from storage:', storageError);
+                    alert('Task deleted, but failed to delete associated file.');
+                } else {
+                    console.log('Associated file deleted:', filePathToDelete);
+                }
+            }
+        }
+    }
 }
 
 datesContainer.addEventListener('click', (event) => {
@@ -303,6 +375,42 @@ async function fetchEvents() {
       renderCalendar(currentDate);
   }
 }
+
+async function checkReminders() {
+    if (!currentUser) return;
+
+    const now = new Date();
+    const oneMinuteLater = new Date(now.getTime() + 60000).toISOString();
+
+    // Get reminders due in the next minute for the current user
+    const { data: reminders, error } = await db
+        .from('Reminders')
+        .select('reminder_time, task_ID, Tasks(title, description)')
+        .lte('reminder_time', oneMinuteLater);
+
+    if (error) {
+        console.error('Error fetching reminders:', error);
+        return;
+    }
+
+    if (!reminders || reminders.length === 0) return;
+
+    for (const reminder of reminders) {
+        const task = reminder.Tasks;
+        if (!task) continue;
+
+        new Notification(`Reminder: ${task.title}`, {
+            body: task.description || 'You have a task coming up!',
+        });
+
+        // Delete the reminder after it's shown
+        await db.from('Reminders')
+            .delete()
+            .eq('Task_ID', reminder.Task_ID)
+            .eq('reminder_time', reminder.reminder_time);
+    }
+}
+
 
 function renderCalendar(date) {
   if (!currentUser) {
@@ -407,3 +515,343 @@ window.addEventListener('click', e => {
       closeModalFunc();
   }
 });
+
+const taskDetailsSection = document.getElementById('taskDetailsSection');
+const taskDetailsContent = document.getElementById('taskDetailsContent');
+
+
+function showTaskDetails(taskId, isEditMode = false) {
+    const task = allEvents.find(event => event.Task_ID === taskId);
+    if (task) {
+        let detailsContent = '';
+
+        const options = [
+            { label: 'Description', property: 'description', className: 'event-description', defaultVisible: true },
+            { label: 'Category', property: 'category', className: 'event-category', defaultVisible: true },
+            { label: 'Date', property: 'due_date', className: 'event-date', defaultVisible: true },
+            { label: 'File', property: 'file', className: 'event-file', defaultVisible: false }, // New option for file
+        ];
+
+        const checklistHTML = `
+            <div class="display-options-container">
+                <button id="display-options-btn-${taskId}">Display Options</button>
+                <div id="display-options-checklist-${taskId}" class="display-options-checklist" style="display: none; position: absolute; background-color: #fff; border: 1px solid #ccc; padding: 10px; border-radius: 5px; z-index: 10;">
+                    ${options.map(option => `
+                        <label style="display: block;">
+                            <input type="checkbox" id="display-${option.property}-${taskId}" data-property="${option.property}" data-task-id="${taskId}" ${localStorage.getItem(`display-${option.property}`) !== 'false' ? 'checked' : ''}>
+                            ${option.label}
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        if (isEditMode) {
+            detailsContent = `
+                <h3>Edit Task</h3>
+                ${checklistHTML}
+                <label for="edit-title">Title:</label>
+                <input type="text" id="edit-title" value="${task.title || ''}"><br><br>
+                <label for="edit-description">Description:</label>
+                <textarea id="edit-description">${task.description || ''}</textarea><br><br>
+                <label for="edit-category">Category:</label>
+                <input type="text" id="edit-category" value="${task.category || ''}"><br><br>
+                <label for="edit-due-date">Due Date:</label>
+                <input type="date" id="edit-due-date" value="${task.due_date}"><br><br>
+                <label for="edit-recurring">Recurring:</label>
+                <input type="checkbox" id="edit-recurring" ${task.recurring ? 'checked' : ''}><br>
+                <div id="edit-recurring-options" style="display: ${task.recurring ? 'block' : 'none'}; margin-left: 20px;">
+                    <label for="edit-recurring-pattern">Repeat:</label>
+                    <select id="edit-recurring-pattern">
+                        <option value="weekly" ${task.recurring_pattern === 'weekly' ? 'selected' : ''}>Weekly</option>
+                        <option value="monthly" ${task.recurring_pattern === 'monthly' ? 'selected' : ''}>Monthly</option>
+                    </select>
+                </div><br>
+                <label for="upload-file">Upload File:</label>
+                <input type="file" id="upload-file" data-task-id="${task.Task_ID}"><br><br>
+                <button id="save-changes-btn" data-task-id="${task.Task_ID}">Save Changes</button>
+                <button id="delete-task-btn" data-task-id="${task.Task_ID}">Delete Task</button>
+            `;
+        } else {
+            let fileDisplayHTML = '';
+            if (task.file_url && task.file_name) {
+                const fileExtension = task.file_name.split('.').pop().toLowerCase();
+                const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+
+                if (imageExtensions.includes(fileExtension)) {
+                    fileDisplayHTML = `
+                        <strong>Attached Image:</strong><br>
+                        <img src="${task.file_url}" alt="${task.file_name}" style="max-width: 100%; height: auto;">
+                    `;
+                } else {
+                    fileDisplayHTML = `
+                        <strong>Attached File:</strong> <a href="${task.file_url}" target="_blank" rel="noopener noreferrer" id="download-file-${task.Task_ID}">Download ${task.file_name}</a>
+                    `;
+                }
+            } else {
+                fileDisplayHTML = '<strong>Attached File:</strong> No file uploaded';
+            }
+
+            detailsContent = `
+                <h3>${task.title || 'Unnamed'}</h3>
+                ${checklistHTML}
+                <p class="event-description" style="display: ${localStorage.getItem('display-description') !== 'false' ? 'block' : 'none'};"><strong>Description:</strong> ${task.description || 'None'}</p>
+                <p class="event-category" style="display: ${localStorage.getItem('display-category') !== 'false' ? 'block' : 'none'};"><strong>Category:</strong> ${task.category || 'Uncategorized'}</p>
+                <p class="event-date" style="display: ${localStorage.getItem('display-date') !== 'false' ? 'block' : 'none'};"><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
+                <div id="file-display-${task.Task_ID}" class="event-file" style="display: ${localStorage.getItem('display-file') !== 'false' ? 'block' : 'none'};">
+                    ${fileDisplayHTML}
+                </div>
+                ${task.recurring ? `<p><strong>Recurring:</strong> Yes (${task.recurring_pattern})</p>` : ''}
+                <button id="edit-task-btn" data-task-id="${task.Task_ID}">Edit</button>
+            `;
+        }
+
+        taskDetailsContent.innerHTML = detailsContent;
+        taskDetailsSection.style.display = 'block';
+
+        // Add event listener for the "Display Options" button
+        const displayOptionsButton = document.getElementById(`display-options-btn-${taskId}`);
+        const displayOptionsChecklist = document.getElementById(`display-options-checklist-${taskId}`);
+
+        if (displayOptionsButton && displayOptionsChecklist) {
+            displayOptionsButton.addEventListener('click', (event) => {
+                displayOptionsChecklist.style.display = displayOptionsChecklist.style.display === 'none' ? 'block' : 'none';
+                // Close other open checklists if needed
+            });
+
+            // Event listeners for the checkboxes in the checklist
+            options.forEach(option => {
+                const checkbox = document.getElementById(`display-${option.property}-${taskId}`);
+                if (checkbox) {
+                    checkbox.addEventListener('change', (event) => {
+                        const property = event.target.dataset.property;
+                        const taskId = event.target.dataset.taskId;
+                        const elementsToToggle = taskDetailsContent.querySelectorAll(`.${option.className}`);
+                        elementsToToggle.forEach(el => {
+                            el.style.display = event.target.checked ? 'block' : 'none';
+                        });
+                        localStorage.setItem(`display-${property}`, event.target.checked);
+                    });
+                }
+            });
+        }
+
+        // Add event listeners for the main action buttons *after* setting innerHTML
+        if (isEditMode) {
+            const saveChangesButton = document.getElementById('save-changes-btn');
+            if (saveChangesButton) {
+                saveChangesButton.addEventListener('click', (event) => {
+                    const taskIdToUpdate = event.target.dataset.taskId;
+                    saveTaskChanges(taskIdToUpdate);
+                });
+            }
+
+            const deleteTaskButton = document.getElementById('delete-task-btn');
+            if (deleteTaskButton) {
+                deleteTaskButton.addEventListener('click', (event) => {
+                    const taskIdToDelete = event.target.dataset.taskId;
+                    deleteTask(taskIdToDelete);
+                    taskDetailsContent.innerHTML = '';
+                    taskDetailsSection.style.display = 'none';
+                });
+            }
+
+            // Add event listener for the file upload input
+            const fileInput = document.getElementById('upload-file');
+            if (fileInput) {
+                fileInput.addEventListener('change', (event) => {
+                    const taskId = event.target.dataset.taskId;
+                    const file = event.target.files[0];
+                    if (file) {
+                        uploadFile(taskId, file);
+                    }
+                });
+            }
+        } else {
+            const editButtonInView = document.getElementById('edit-task-btn');
+            if (editButtonInView) {
+                editButtonInView.addEventListener('click', (event) => {
+                    const taskIdToEdit = event.target.dataset.taskId;
+                    showTaskDetails(taskIdToEdit, true);
+                });
+            }
+        }
+
+        // Close the checklist when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', (event) => {
+                const displayOptionsChecklist = document.getElementById(`display-options-checklist-${taskId}`);
+                const displayOptionsButton = document.getElementById(`display-options-btn-${taskId}`);
+                if (displayOptionsChecklist && displayOptionsChecklist.style.display === 'block' && displayOptionsButton && !displayOptionsButton.contains(event.target) && !displayOptionsChecklist.contains(event.target)) {
+                    displayOptionsChecklist.style.display = 'none';
+                }
+            });
+        }, 0);
+
+    } else {
+        taskDetailsContent.innerHTML = '<p>Task details not found.</p>';
+        taskDetailsSection.style.display = 'block';
+    }
+}
+
+async function saveTaskChanges(taskId) {
+    if (!currentUser || !taskId) return;
+
+    const updatedTask = {
+        title: document.getElementById('edit-title').value,
+        description: document.getElementById('edit-description').value,
+        category: document.getElementById('edit-category').value,
+        due_date: document.getElementById('edit-due-date').value,
+        recurring: document.getElementById('edit-recurring').checked,
+        recurring_pattern: document.getElementById('edit-recurring').checked
+            ? document.getElementById('edit-recurring-pattern').value
+            : null,
+        Username: currentUser
+    };
+
+    const { error } = await db
+        .from('Tasks')
+        .update(updatedTask)
+        .eq('Task_ID', taskId);
+
+    if (error) {
+        console.error('Update error:', error);
+        alert('Failed to save changes.');
+    } else {
+        console.log('Task updated:', taskId, updatedTask);
+        // Update the task in the allEvents array
+        const index = allEvents.findIndex(task => task.Task_ID === taskId);
+        if (index !== -1) {
+            allEvents[index] = { ...allEvents[index], ...updatedTask };
+        }
+        renderEventList();
+        renderCalendar(currentDate);
+
+        // Instead of clearing and hiding, show the view-only version
+        showTaskDetails(taskId, false);
+    }
+}
+
+let currentDisplayOptionsChecklist = null; // To manage and close existing checklists
+
+function showDisplayOptions(taskId, buttonElement) {
+    const task = allEvents.find(event => event.Task_ID === taskId);
+    if (!task) return;
+
+    // Close any existing checklist
+    if (currentDisplayOptionsChecklist) {
+        currentDisplayOptionsChecklist.remove();
+        currentDisplayOptionsChecklist = null;
+        return;
+    }
+
+    const checklistContainer = document.createElement('div');
+    checklistContainer.classList.add('display-options-checklist');
+    checklistContainer.style.position = 'absolute';
+    checklistContainer.style.left = buttonElement.offsetLeft + 'px';
+    checklistContainer.style.top = (buttonElement.offsetTop + buttonElement.offsetHeight) + 'px';
+    checklistContainer.style.backgroundColor = '#fff';
+    checklistContainer.style.border = '1px solid #ccc';
+    checklistContainer.style.padding = '10px';
+    checklistContainer.style.borderRadius = '5px';
+    checklistContainer.style.zIndex = '10'; // Ensure it's above other elements
+
+    const options = [
+        { label: 'Description', property: 'description', className: 'event-description', defaultVisible: true },
+        { label: 'Category', property: 'category', className: 'event-category', defaultVisible: true },
+        { label: 'Date', property: 'due_date', className: 'event-date', defaultVisible: true },
+        // Add more options here as you implement them (e.g., Files, Images, Hyperlinks)
+    ];
+
+    options.forEach(option => {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `display-${option.property}-${taskId}`;
+        checkbox.checked = localStorage.getItem(`display-${option.property}`) !== 'false' ? option.defaultVisible : false; // Remember user preference
+
+        const label = document.createElement('label');
+        label.htmlFor = `display-${option.property}-${taskId}`;
+        label.textContent = option.label;
+        label.style.display = 'block';
+
+        checklistContainer.appendChild(checkbox);
+        checklistContainer.appendChild(label);
+
+        checkbox.addEventListener('change', () => {
+            const elementsToToggle = eventList.querySelectorAll(`.event-item[data-task-id="${taskId}"] .${option.className}`);
+            elementsToToggle.forEach(el => {
+                el.style.display = checkbox.checked ? 'block' : 'none';
+            });
+            localStorage.setItem(`display-${option.property}`, checkbox.checked); // Save user preference
+        });
+    });
+
+    document.body.appendChild(checklistContainer);
+    currentDisplayOptionsChecklist = checklistContainer;
+
+    // Close the checklist when clicking outside
+    setTimeout(() => {
+        document.addEventListener('click', closeDisplayOptionsChecklist);
+    }, 0);
+}
+
+function closeDisplayOptionsChecklist(event) {
+    if (currentDisplayOptionsChecklist && !currentDisplayOptionsChecklist.contains(event.target)) {
+        currentDisplayOptionsChecklist.remove();
+        currentDisplayOptionsChecklist = null;
+        document.removeEventListener('click', closeDisplayOptionsChecklist);
+    }
+}
+
+async function uploadFile(taskId, file) {
+    if (!taskId || !file || !currentUser) {
+        console.error('Missing task ID, file, or user.');
+        return;
+    }
+
+    const bucketName = 'files'; // Changed to your bucket name
+    const filePath = `tasks/${currentUser}/${taskId}/${file.name}`; // Path within your 'files' bucket
+
+    try {
+        const { data, error } = await db
+            .storage
+            .from(bucketName)
+            .upload(filePath, file, { upsert: false });
+
+        if (error) {
+            console.error('Error uploading file:', error);
+            alert('Failed to upload file.');
+        } else {
+            console.log('File uploaded successfully:', data);
+            const fileUrl = `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${data.path}`; // Construct public URL
+
+            // Store the file URL in the Tasks table
+            const { error: dbError } = await db
+                .from('Tasks')
+                .update({ file_url: fileUrl, file_name: file.name })
+                .eq('Task_ID', taskId);
+
+                if (dbError) {
+                    // ...
+                } else {
+                    console.log('File URL saved to database:', fileUrl);
+                    const index = allEvents.findIndex(event => event.Task_ID === taskId);
+                    if (index !== -1) {
+                        allEvents[index].file_url = fileUrl;
+                        allEvents[index].file_name = file.name;
+                    }
+                    showTaskDetails(taskId, false);
+                }
+        }
+    } catch (error) {
+        console.error('Error during file upload:', error);
+        alert('An unexpected error occurred during file upload.');
+    }
+}
+
+// Initially hide the task details section
+taskDetailsSection.style.display = 'none';
+
+
+
+setInterval(checkReminders, 30000); // check every 30 seconds
