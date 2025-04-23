@@ -24,6 +24,7 @@ body {
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    margin-right: 20px;
 }
 
 .header {
@@ -383,6 +384,7 @@ body {
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
+    margin-right: 20px;
   }
   
   .event-item .delete-btn {
@@ -411,3 +413,20 @@ body {
     margin-right: 10px; /* Or your preferred spacing */
     display: none; /* Initially hide the button */
 }
+
+#taskDetailsSection {
+    width: 300px; /* Set a fixed width for the details section */
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 8px;
+    box-sizing: border-box; /* Ensure padding and border are within the width */
+    /* You might want to add a fixed height or make it scrollable */
+    /* height: 400px; */
+    /* overflow-y: auto; */
+}
+
+#taskDetailsContent {
+    margin-top: 10px;
+}
+
