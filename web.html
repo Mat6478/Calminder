@@ -91,7 +91,14 @@
             </div>
             <div class="dates" id="dates"></div>
         </div>
+
+        <div id="taskDetailsSection">
+            <h2>Task Details</h2>
+            <div id="taskDetailsContent">
+                </div>
+        </div>
     </div>
+
 
     <div id="eventModal" class="modal" style="display: none;">
         <div class="modal-content" id="modalContent">
@@ -101,6 +108,20 @@
             <input type="text" id="eventTitle" placeholder="Event Title" />
             <textarea id="eventDescription" placeholder="Event Description"></textarea>
             <textarea id="eventCategory" placeholder="Event Category"></textarea>
+            <div id="reminderOptions">
+                <p>Remind me:</p>
+                <label><input type="checkbox" name="reminder" value="14"> 2 weeks before</label><br>
+                <label><input type="checkbox" name="reminder" value="7"> 1 week before</label><br>
+                <label><input type="checkbox" name="reminder" value="3"> 3 days before</label><br>
+                <label><input type="checkbox" name="reminder" value="1"> 1 day before</label><br>
+                <label><input type="checkbox" name="reminder" value="0"> Day of event</label><br>
+                <label>
+                  <input type="checkbox" id="customReminderCheck">
+                  Custom:
+                  <input type="datetime-local" id="customReminderTime" disabled>
+                </label>
+            </div>
+            
             <button id="saveEvent">Save Event</button>
             <button id="deleteEvent" style="display: none;">Delete Event</button>
             <label for="recurring">Recurring:</label>
@@ -118,6 +139,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="main.js"></script>
+
 </body>
 
 </html>
