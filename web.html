@@ -77,7 +77,8 @@
                 <button id="prevBtn"><i class="fa-solid fa-chevron-left"></i></button>
                 <div class="monthYear" id="monthYear"></div>
                 <p id="selectedDateDisplay" class="selected-date-display">Selected Date: None</p>
-                <button id="createTaskButton">Create Task</button>
+                <button id="createTaskButton" class="header-button" style="display:none;">Create Task</button>
+                <button id="createScheduleBlockButton" class="header-button" onclick="openScheduleBlockModal()">Create Schedule Block</button>             
                 <button id="nextBtn"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
             <div class="days">
@@ -90,6 +91,12 @@
                 <div class="day">Sun</div>
             </div>
             <div class="dates" id="dates"></div>
+        </div>
+
+        <div id="taskDetailsSection">
+            <h2>Task Details</h2>
+            <div id="taskDetailsContent">
+                </div>
         </div>
     </div>
 
@@ -134,6 +141,36 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="main.js"></script>
 
+
+    <!-- Schedule Block Modal -->
+<div id="scheduleBlockModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span id="closeScheduleModal" class="close">&times;</span>
+      <h2>Create Schedule Block</h2>
+  
+      <input type="text" id="blockTitle" placeholder="Block Title (e.g., Gym Time)" />
+  
+      <label>Start Time:</label>
+      <input type="time" id="startTime" />
+  
+      <label>End Time:</label>
+      <input type="time" id="endTime" />
+  
+      <div>
+        <p>Days:</p>
+        <label><input type="checkbox" name="days" value="Monday"> Monday</label>
+        <label><input type="checkbox" name="days" value="Tuesday"> Tuesday</label>
+        <label><input type="checkbox" name="days" value="Wednesday"> Wednesday</label>
+        <label><input type="checkbox" name="days" value="Thursday"> Thursday</label>
+        <label><input type="checkbox" name="days" value="Friday"> Friday</label>
+        <label><input type="checkbox" name="days" value="Saturday"> Saturday</label>
+        <label><input type="checkbox" name="days" value="Sunday"> Sunday</label>
+      </div>
+  
+      <button id="saveScheduleBlock">Save Block</button>
+    </div>
+  </div>
+  
 </body>
 
 </html>

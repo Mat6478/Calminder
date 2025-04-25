@@ -24,6 +24,7 @@ body {
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    margin-right: 20px;
 }
 
 .header {
@@ -39,24 +40,27 @@ body {
     width: 150px;
 }
 
-.header button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.header-button {
+    background-color: #4f43bd;
+    color: white;
     border: none;
-    border-radius: 50%;
-    background: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
     cursor: pointer;
-    width: 40px;
-    height: 40px;
-    box-shadow: 0 0 4px rgba(0,0,0,0.2);
+    margin-right: 8px;
+    font-size: 0.9em;
     transition: background 0.3s;
 }
 
-.header button:hover {
-    background: #ff5869;
-    color: white;
+.header-button:hover {
+    background-color: #3d32a3;
 }
+
+/* Only hide the Create Task button, not Schedule Block button! */
+#createTaskButton {
+    display: none;
+}
+
 
 .days {
     display: grid;
@@ -181,15 +185,21 @@ body {
 .has-event:hover {
     background-color: #ffd54f;
 }
-.date.has-event {
-    background-color: #ffeb3b; /* Yellow background to indicate event */
-    border: 2px solid #ffa726;
-    color: black;
-}
 
-.date.has-event:hover {
-    background-color: #ffd54f;
-}
+
+/* Highlight dates that have events (tasks) */
+.date.has-event {
+    background-color: #ffeb3b; /* Yellow background for dates with tasks */
+    color: black;
+    border: 2px solid #ffa726; /* Optional: Add border to make it more noticeable */
+  }
+  
+  .date.has-event:hover {
+    background-color: #ffd54f; /* Lighten the color on hover */
+    cursor: pointer;
+  }
+  
+  
 
 /* Event modal styles */
 #eventModal {
@@ -205,8 +215,17 @@ body {
 }
 
 .event-item {
-    margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  display: flex;
+  flex-direction: column; /* Stack vertically */
+  align-items: flex-start; /* Align text to the left */
+  background-color: #f0f0f0;
+  border-radius: 6px;
+  margin-bottom: 10px;
 }
+
+  
 
 .event-item button {
     margin-left: 10px;
@@ -277,12 +296,13 @@ body {
 }
 
 #eventList {
-    max-height: 200px;
-    overflow-y: auto;
-    margin-top: 10px;
-    border-top: 1px solid #ddd;
-    padding-top: 10px;
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 10px;
+  border-top: 1px solid #ddd;
+  padding-top: 10px;
 }
+
 
 .event-item {
     padding: 6px;
@@ -303,11 +323,6 @@ body {
     cursor: pointer;
 }
 
-.date.has-event {
-    background-color: #ffeb3b;
-    border: 2px solid #ffa726;
-    color: black;
-}
 /* Completed Event Styling */
 .event-item.completed {
     background-color: #d4edda; /* Light green background */
@@ -354,5 +369,76 @@ body {
     color: gray;
 }
 
+.main-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px;
+  }
+  
+  #taskContainer {
+    width: 250px;
+    height: calc(100vh - 300px); /* Make it tall but leave room for padding/margins */
+    overflow-y: auto;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    margin-right: 20px;
+  }
+  
+  .event-item .delete-btn {
+    background-color: #dc3545; /* Red color */
+    color: white;
+    border: none;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    margin-left: 10px;
+}
 
-updateCalendar();
+.event-item .delete-btn:hover {
+    background-color: #c82333;
+}
+
+.header-button {
+    background-color: #4f43bd;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 8px;
+    font-size: 0.9em;
+    transition: background 0.3s;
+}
+
+.header-button:hover {
+    background-color: #3d32a3;
+}
+
+#createTaskButton {
+    display: none; /* Create Task Button is hidden until a date is selected */
+}
+
+
+#taskDetailsSection {
+    width: 300px; /* Set a fixed width for the details section */
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 8px;
+    box-sizing: border-box; /* Ensure padding and border are within the width */
+    /* You might want to add a fixed height or make it scrollable */
+    /* height: 400px; */
+    /* overflow-y: auto; */
+}
+
+#taskDetailsContent {
+    margin-top: 10px;
+}
+
