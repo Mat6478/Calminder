@@ -11,6 +11,12 @@ if ('Notification' in window && Notification.permission !== 'granted') {
 
 const usernamePrompt = document.getElementById('usernamePrompt');
 const usernameInput = document.getElementById('usernameInput');
+const loginScreen = document.getElementById('loginScreen');
+const loginUsername = document.getElementById('loginUsername');
+const loginEmail = document.getElementById('loginEmail');
+const loginPassword = document.getElementById('loginPassword');
+const loginButton = document.getElementById('loginButton');
+const loginError = document.getElementById('loginError');
 const usernameSubmit = document.getElementById('usernameSubmit');
 const overlay = document.getElementById('overlay');
 const monthYearText = document.getElementById('monthYear');
@@ -49,49 +55,84 @@ let showingCompleted = false;
 let currentUser = '';
 let calendarInitialized = false;
 
-// Function to handle username submission
-usernameSubmit.addEventListener('click', async () => { // Make the event listener async
-  const username = usernameInput.value.trim();
-  if (username) {
-      // Check if the username exists in the Users table
-      const { data: existingUsers, error: selectError } = await db
-          .from('Users')
-          .select('Username')
-          .eq('Username', username);
+// Function to handle Username submission
+loginButton.addEventListener('click', async () => {
+    const Username = loginUsername.value.trim().replaceAll(':', '');
+    const password = loginPassword.value.trim();
+    const email = loginEmail.value.trim();
 
-      if (selectError) {
-          console.error('Error checking for existing user:', selectError);
-          alert('An error occurred while checking the username.');
-          return;
-      }
+    console.log({
+        Username: Username,
+        email: email,
+        password: password
+      });
+      
+    if (!Username || !password) {
+        loginError.textContent = 'Please enter both Username and password.';
+        return;
+    }
 
-      // If the username doesn't exist, insert it
-      if (!existingUsers || existingUsers.length === 0) {
-          const { error: insertError } = await db
-              .from('Users')
-              .insert([{ Username: username, fname: 'default' }]); // Provide a default value for fname
+    const { data: existingUser, error: selectError } = await db
+    .from('Users')
+    .select('*')
+    .eq('Username', Username)
+    .maybeSingle(); // <-- CHANGES HERE
+  
 
-          if (insertError) {
-              console.error('Error creating new user:', insertError);
-              alert('An error occurred while creating the username.');
-              return;
-          } else {
-              console.log('New user created:', username);
+    if (selectError) {
+        console.error('Error checking user:', selectError);
+        loginError.textContent = 'An error occurred. Try again.';
+        return;
+    }
+
+    if (existingUser) {
+        if (existingUser.password && existingUser.password === password) {
+            console.log('Login successful!');
+            currentUser = Username;
+            loginScreen.style.display = 'none';
+            overlay.style.display = 'none';
+            Promise.all([fetchEvents(), fetchScheduleBlocks()]).then(() => {
+                renderCalendar(currentDate);
+                calendarInitialized = true;
+            });
+        } else {
+            loginError.textContent = 'Incorrect password.';
+        }
+    } else {
+        if (!email) {
+            loginError.textContent = 'Please enter an email to sign up.';
+            return;
+        }
+
+        const { data: insertData, error: insertError } = await db
+        .from('Users')
+        .insert([
+          {
+            Username: Username,
+            email: email,
+            password: password
           }
-      }
+        ])
+        .select();  // <- important!
+      
 
-      currentUser = username;
-      usernamePrompt.classList.add('hidden');
-      overlay.classList.add('hidden');
-      Promise.all([fetchEvents(), fetchScheduleBlocks()]).then(() => {
-        renderCalendar(currentDate);
-        calendarInitialized = true;
-    });
-    
-  } else {
-      alert('Please enter a username.');
-  }
+
+        if (insertError) {
+            console.error('Error creating user:', insertError);
+            loginError.textContent = 'Could not create account. Try again.';
+        } else {
+            console.log('New account created!');
+            currentUser = Username;
+            loginScreen.style.display = 'none';
+            overlay.style.display = 'none';
+            Promise.all([fetchEvents(), fetchScheduleBlocks()]).then(() => {
+                renderCalendar(currentDate);
+                calendarInitialized = true;
+            });
+        }
+    }
 });
+
 
 function renderEventList() {
     eventList.innerHTML = '';
@@ -432,7 +473,7 @@ async function checkReminders() {
 
 function renderCalendar(date) {
   if (!currentUser) {
-      monthYearText.textContent = 'Please enter username';
+      monthYearText.textContent = 'Please enter Username';
       datesContainer.innerHTML = '';
       return;
   }

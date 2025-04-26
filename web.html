@@ -57,11 +57,17 @@
 
 <body>
     <div id="overlay"></div>
-    <div id="usernamePrompt">
-        <h2>Enter Username</h2>
-        <input type="text" id="usernameInput" placeholder="Your Username">
-        <button id="usernameSubmit">Submit</button>
-    </div>
+    <div id="loginScreen" class="login-screen">
+        <div class="login-box">
+          <h1>Welcome to My Calendar App</h1>
+          <input type="text" id="loginUsername" placeholder="Username" />
+          <input type="email" id="loginEmail" placeholder="Email (for signup only)" />
+          <input type="password" id="loginPassword" placeholder="Password" />
+          <button id="loginButton">Login / Signup</button>
+          <p id="loginError" class="error-message"></p>
+        </div>
+      </div>
+      
 
     <div class="main-container">
         <div id="taskContainer" class="draggable resizable">
