@@ -491,3 +491,28 @@ body {
     font-size: 0.9em;
     margin-top: 10px;
 }
+#progressContainer {
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+#progressBar {
+    width: 100%;
+    background-color: #eee;
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#progressFill {
+    height: 100%;
+    width: 0%;
+    background-color: #4CAF50;
+    transition: width 0.5s;
+}
+
+#progressText {
+    margin-top: 5px;
+    font-size: 0.9em;
+    color: #333;
+}

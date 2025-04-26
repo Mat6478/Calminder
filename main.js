@@ -197,6 +197,8 @@ function renderEventList() {
         });
         
         eventList.appendChild(item);
+        updateProgressBar();
+
     });
 
 }
@@ -946,6 +948,18 @@ window.onload = () => {
     });
 };
 
-
-
 setInterval(checkReminders, 30000); // check every 30 seconds
+
+function updateProgressBar() {
+    const totalTasks = allEvents.length;
+    const completedTasks = allEvents.filter(task => task.completed).length;
+
+    const percent = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+
+    progressFill.style.width = percent + '%';
+    progressText.textContent = `${percent}% Complete`;
+}
+
