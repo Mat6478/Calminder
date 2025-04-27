@@ -1,58 +1,140 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Calendar</title>
     <link rel="stylesheet" href="style.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-</head>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      #form {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        text-align: center;
+      }
 
-<body>
-    <div class="main-wrapper">
-        <div id="taskContainer">
-            <div id="tabs">
-                <button id="activeTab" class="tab active">Active Tasks</button>
-                <button id="completedTab" class="tab">Completed Tasks</button>
-            </div>
-            <div id="eventList"></div>
-        </div>
+      #email {
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
 
-        <div class="calendar">
-            <div class="header">
-                <button id="prevBtn"><i class="fa-solid fa-chevron-left"></i></button>
-                <div class="monthYear" id="monthYear"></div>
-                <p id="selectedDateDisplay" class="selected-date-display">Selected Date: None</p>
-                <button id="nextBtn"><i class="fa-solid fa-chevron-right"></i></button>
-            </div>
-            <div class="days">
-                <div class="day">Mon</div>
-                <div class="day">Tue</div>
-                <div class="day">Wed</div>
-                <div class="day">Thu</div>
-                <div class="day">Fri</div>
-                <div class="day">Sat</div>
-                <div class="day">Sun</div>
-            </div>
-            <div class="dates" id="dates"></div>
+      #button {
+        padding: 10px 15px;
+        background-color: #4f43bd;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      #overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      /* Existing styles from style.css will still apply */
+    </style>
+  </head>
+
+  <body>
+	<form id="form">
+  <div class="field">
+    <label for="email">email</label>
+    <input type="text" name="email" id="email">
+  </div>
+
+  <input type="submit" id="button" value="Send Email" >
+</form>
+
+    <div class="main-container">
+      <div id="taskContainer" class="draggable resizable">
+        <div id="tabs">
+          <button id="activeTab" class="tab active">Active Tasks</button>
+          <button id="completedTab" class="tab">Completed Tasks</button>
         </div>
+        <div id="eventList"></div>
+      </div>
+
+      <div class="calendar draggable resizable">
+        <div class="header">
+          <button id="prevBtn"><i class="fa-solid fa-chevron-left"></i></button>
+          <div class="monthYear" id="monthYear"></div>
+          <p id="selectedDateDisplay" class="selected-date-display">
+            Selected Date: None
+          </p>
+          <button id="createTaskButton">Create Task</button>
+          <button id="nextBtn">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+        <div class="days">
+          <div class="day">Mon</div>
+          <div class="day">Tue</div>
+          <div class="day">Wed</div>
+          <div class="day">Thu</div>
+          <div class="day">Fri</div>
+          <div class="day">Sat</div>
+          <div class="day">Sun</div>
+        </div>
+        <div class="dates" id="dates"></div>
+      </div>
     </div>
 
-    <div id="eventModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span id="closeModal" class="close">&times;</span>
-            <h2>Add Event</h2>
-            <p id="selectedDate"></p>
-            <input type="text" id="eventTitle" placeholder="Event Title" />
-            <input type="time" id="eventTime" />
-            <textarea id="eventDescription" placeholder="Event Description"></textarea>
-            <textarea id="eventCategory" placeholder="Event Category"></textarea>
-            <button id="saveEvent">Save Event</button>
-        </div>
-    </div>
+    <div id="eventModal" class="modal" style="display: none">
+      <div class="modal-content" id="modalContent">
+        <span id="closeModal" class="close">&times;</span>
+        <h2 id="modalTitle">Add Event</h2>
+        <p id="selectedDate"></p>
+        <input type="text" id="eventTitle" placeholder="Event Title" />
+        <textarea
+          id="eventDescription"
+          placeholder="Event Description"
+        ></textarea>
+        <textarea id="eventCategory" placeholder="Event Category"></textarea>
+        <button id="saveEvent">Save Event</button>
+        <button id="deleteEvent" style="display: none">Delete Event</button>
+        <label for="recurring">Recurring:</label>
+        <input type="checkbox" id="recurring" />
 
+        <div id="recurringOptions" style="display: none; margin-left: 20px">
+          <label for="recurringPattern">Repeat:</label>
+          <select id="recurringPattern">
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"
+    ></script>
+
+    <script type="text/javascript">
+      emailjs.init("1rU8_2vFYuteVtcS8")
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="main.js"></script>
-</body>
-
+  </body>
 </html>
