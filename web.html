@@ -73,6 +73,7 @@
         </div>
 
         <div class="calendar draggable resizable">
+            <div id="streak-counter" class="streak-box">Your current streak: 0 days</div>
             <div class="header">
                 <button id="prevBtn"><i class="fa-solid fa-chevron-left"></i></button>
                 <div class="monthYear" id="monthYear"></div>
@@ -99,6 +100,12 @@
         </div>
     </div>
 
+    <div id="reportButtons">
+        <button id="generateReportBtn" class="report-btn">Generate Weekly Report</button>
+        <button id="viewReportsBtn" class="report-btn">View Past Weekly Reports</button>
+        <button id="clearReportsBtn" class="report-btn">Clear Weekly Reports</button>
+    </div>
+    
 
     <div id="eventModal" class="modal" style="display: none;">
         <div class="modal-content" id="modalContent">
@@ -137,9 +144,18 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script src="main.js"></script>
 
-</body>
+    <div id="weeklyReportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+        <span id="closeReportModal" class="close">&times;</span>
+          <h2>Weekly Report</h2>
+          <div id="weeklyReportContent" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+      
+      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+      <script src="main.js"></script>
+
+    </body>
 
 </html>

@@ -415,6 +415,7 @@ body {
 }
 
 #taskDetailsSection {
+    display: none;
     width: 300px; /* Set a fixed width for the details section */
     background-color: #f9f9f9;
     border: 1px solid #ddd;
@@ -430,3 +431,39 @@ body {
     margin-top: 10px;
 }
 
+/* Wrapper for buttons */
+#reportButtons {
+    position: fixed; 
+    top: 10px;      
+    left: 10px;     
+    display: flex;  
+    flex-direction: column; /* Stack the buttons vertically */
+    gap: 10px;     
+    z-index: 1000;   
+}
+
+/* Styling for each button */
+.report-btn {
+    background-color: #4CAF50; /* Green color */
+    color: white;
+    border: none;
+    padding: 8px 12px; /* Adjust the size */
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px; /* Smaller text */
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+    width: 120px; /* Make buttons narrower */
+}
+
+/* Button hover effect */
+.report-btn:hover {
+    background-color: #45a049; /* Slightly darker green */
+    transform: scale(1.05); /* Grow effect */
+}
+
+/* Button active effect */
+.report-btn:active {
+    transform: scale(0.98); /* Shrink effect on click */
+}

@@ -131,6 +131,7 @@ function renderEventList() {
           if (taskToUpdate) {
               const updated = !taskToUpdate.completed;
               await db.from('Tasks').update({ completed: updated }).eq('Task_ID', taskIdToUpdate);
+              if (updated === true) updateStreakOnTaskComplete();
               taskToUpdate.completed = updated;
               renderEventList();
               renderCalendar(currentDate);
@@ -510,11 +511,11 @@ completedTab.addEventListener('click', () => {
   }
 });
 
-window.addEventListener('click', e => {
-  if (e.target === eventModal) {
-      closeModalFunc();
-  }
-});
+//window.addEventListener('click', e => {
+  //if (e.target === eventModal) {
+      //closeModalFunc();
+  //}
+//});
 
 const taskDetailsSection = document.getElementById('taskDetailsSection');
 const taskDetailsContent = document.getElementById('taskDetailsContent');
@@ -849,9 +850,167 @@ async function uploadFile(taskId, file) {
     }
 }
 
-// Initially hide the task details section
-taskDetailsSection.style.display = 'none';
+function updateStreakOnTaskComplete() {
+    const today = new Date().toDateString();
+    const lastCompletedDate = localStorage.getItem('lastCompletedDate');
+    let currentStreak = parseInt(localStorage.getItem('currentStreak') || '0', 10);
+
+    if (lastCompletedDate === today) return;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (lastCompletedDate === yesterday.toDateString()) {
+        currentStreak += 1;
+    } else {
+        currentStreak = 1;
+    }
+
+    localStorage.setItem('lastCompletedDate', today);
+    localStorage.setItem('currentStreak', currentStreak.toString());
+    updateStreakUI();
+}
+
+function updateStreakUI() {
+    const streak = parseInt(localStorage.getItem('currentStreak') || '0', 10);
+    const streakDisplay = document.getElementById('streak-counter');
+    if (streakDisplay) {
+        streakDisplay.textContent = `Your current streak: ${streak} day${streak !== 1 ? 's' : ''}`;
+    }
+}
+
+function generateWeeklyReport() {
+    const taskDetailsSection = document.getElementById('taskDetailsSection'); // Get taskDetailsSection
+    if (taskDetailsSection) {
+        taskDetailsSection.style.display = 'none'; // Safely hide it
+    }
+
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const completedThisWeek = allEvents.filter(task => {
+        if (!task.completed) return false;
+        const taskDate = new Date(task.due_date);
+        return taskDate >= startOfWeek && taskDate <= now;
+    });
+
+    const totalCompletedThisWeek = completedThisWeek.length;
+    const currentStreak = parseInt(localStorage.getItem('currentStreak') || '0', 10);
+
+    const reportHtml = `
+        <p><strong>Tasks Completed This Week:</strong> ${totalCompletedThisWeek}</p>
+        <p><strong>Current Streak:</strong> ${currentStreak} day${currentStreak !== 1 ? 's' : ''}</p>
+    `;
+
+    const reports = JSON.parse(localStorage.getItem('weeklyReports') || '[]');
+
+reports.push({
+    weekStart: startOfWeek.toDateString(),
+    weekEnd: now.toDateString(),
+    tasksCompleted: totalCompletedThisWeek,
+    streak: currentStreak
+});
+
+localStorage.setItem('weeklyReports', JSON.stringify(reports));
+
+    document.getElementById('weeklyReportContent').innerHTML = reportHtml;
+    document.getElementById('weeklyReportModal').style.display = 'flex';
+}
+
+function viewAllWeeklyReports() {
+    const reports = JSON.parse(localStorage.getItem('weeklyReports') || '[]');
+    if (reports.length === 0) {
+        alert("No reports found yet!");
+        return;
+    }
+
+    let reportText = "Past Weekly Reports:\n\n";
+
+    reports.forEach((r, index) => {
+        reportText += `Week ${index + 1} (${r.weekStart} ➔ ${r.weekEnd}):\n`;
+        reportText += `- Tasks Completed: ${r.tasksCompleted}\n`;
+        reportText += `- Streak: ${r.streak} day${r.streak !== 1 ? 's' : ''}\n\n`;
+    });
+
+    alert(reportText);
+}
+
+function viewAllWeeklyReports() {
+    const reports = JSON.parse(localStorage.getItem('weeklyReports') || '[]');
+    if (reports.length === 0) {
+        alert("No reports found yet!");
+        return;
+    }
+
+    let reportHtml = "<h2>Past Weekly Reports</h2>";
+
+    reports.forEach((r, index) => {
+        reportHtml += `
+            <div style="margin-bottom: 15px;">
+                <strong>Week ${index + 1} (${r.weekStart} ➔ ${r.weekEnd}):</strong><br>
+                Tasks Completed: ${r.tasksCompleted}<br>
+                Streak: ${r.streak} day${r.streak !== 1 ? 's' : ''}
+            </div>
+        `;
+    });
+
+    const weeklyReportContent = document.getElementById('weeklyReportContent');
+    if (weeklyReportContent) {
+        weeklyReportContent.innerHTML = reportHtml;
+    }
+
+    const weeklyReportModal = document.getElementById('weeklyReportModal');
+    if (weeklyReportModal) {
+        weeklyReportModal.style.display = 'flex';
+    }
+}
+
+function clearWeeklyReports() { //clear weekly reports
+    if (confirm("Are you sure you want to clear all weekly reports?")) {
+        localStorage.removeItem('weeklyReports');
+        alert("All weekly reports have been cleared!");
+    }
+}
 
 
+const generateReportBtn = document.getElementById('generateReportBtn');
+const viewReportsBtn = document.getElementById('viewReportsBtn');
+const closeReportModalBtn = document.getElementById('closeReportModal');
+const weeklyReportModal = document.getElementById('weeklyReportModal');
+const clearReportsBtn = document.getElementById('clearReportsBtn');
 
-setInterval(checkReminders, 30000); // check every 30 seconds
+
+function attachEventListeners() {
+    if (generateReportBtn) {
+        generateReportBtn.addEventListener('click', generateWeeklyReport);
+    } else {
+        console.error("Error: #generateReportBtn not found");
+    }
+
+    if (viewReportsBtn) {
+        viewReportsBtn.addEventListener('click', viewAllWeeklyReports);
+    } else {
+        console.error("Error: #viewReportsBtn not found");
+    }
+
+    if (clearReportsBtn) {
+        clearReportsBtn.addEventListener('click', clearWeeklyReports);
+    } else {
+        console.error("Error: #clearReportsBtn not found");
+    }
+
+    if (closeReportModalBtn) {
+        closeReportModalBtn.addEventListener('click', () => {
+            weeklyReportModal.style.display = 'none';
+        });
+    } else {
+        console.error("Error: #closeReportModal not found");
+    }
+}
+
+document.addEventListener('DOMContentLoaded', attachEventListeners);
+
+updateStreakUI();
+setInterval(checkReminders, 30000);
