@@ -8,7 +8,6 @@ if ('Notification' in window && Notification.permission !== 'granted') {
     Notification.requestPermission();
 }
 
-
 const usernamePrompt = document.getElementById('usernamePrompt');
 const usernameInput = document.getElementById('usernameInput');
 const loginScreen = document.getElementById('loginScreen');
@@ -17,6 +16,7 @@ const loginEmail = document.getElementById('loginEmail');
 const loginPassword = document.getElementById('loginPassword');
 const loginButton = document.getElementById('loginButton');
 const loginError = document.getElementById('loginError');
+
 const usernameSubmit = document.getElementById('usernameSubmit');
 const overlay = document.getElementById('overlay');
 const monthYearText = document.getElementById('monthYear');
@@ -79,11 +79,11 @@ loginButton.addEventListener('click', async () => {
     .maybeSingle(); // <-- CHANGES HERE
   
 
-    if (selectError) {
-        console.error('Error checking user:', selectError);
-        loginError.textContent = 'An error occurred. Try again.';
-        return;
-    }
+      if (selectError) {
+          console.error('Error checking for existing user:', selectError);
+          alert('An error occurred while checking the username.');
+          return;
+      }
 
     if (existingUser) {
         if (existingUser.password && existingUser.password === password) {
@@ -172,13 +172,14 @@ function renderEventList() {
           const taskIdToUpdate = event.target.dataset.taskId;
           const taskToUpdate = allEvents.find(task => task.Task_ID === taskIdToUpdate);
           if (taskToUpdate) {
-              const updated = !taskToUpdate.completed;
-              await db.from('Tasks').update({ completed: updated }).eq('Task_ID', taskIdToUpdate);
-              taskToUpdate.completed = updated;
-              renderEventList();
-              renderCalendar(currentDate);
-          }
-      });
+            const updated = !taskToUpdate.completed;
+            await db.from('Tasks').update({ completed: updated }).eq('Task_ID', taskIdToUpdate);
+            if (updated === true) updateStreakOnTaskComplete();
+            taskToUpdate.completed = updated;
+            renderEventList();
+            renderCalendar(currentDate);
+        }
+    });
 
       // Event listener for the Edit button
       const editButton = item.querySelector('.edit-btn');
@@ -197,8 +198,6 @@ function renderEventList() {
         });
         
         eventList.appendChild(item);
-        updateProgressBar();
-
     });
 
 }
@@ -218,23 +217,7 @@ function openModal(date) {
     eventModal.style.display = 'block';
 }
 
-// function openModalForEdit(task) {
-//     selectedDate = task.due_date;
-//     document.getElementById('selectedDate').textContent = `Selected Date: ${selectedDate}`; // Corrected ID
-//     eventTitle.value = task.title;
-//     eventDescription.value = task.description || '';
-//     eventCategory.value = task.category || '';
-//     recurringCheckbox.checked = task.recurring || false;
-//     recurringOptionsDiv.style.display = recurringCheckbox.checked ? 'block' : 'none';
-//     if (task.recurring) {
-//         document.getElementById('recurringPattern').value = task.recurring_pattern || 'weekly';
-//     }
-//     document.getElementById('modalTitle').textContent = 'Edit Task';
-//     document.getElementById('saveEvent').textContent = 'Save Changes';
-//     document.getElementById('deleteEvent').style.display = 'inline-block';
-//     document.getElementById('deleteEvent').dataset.taskId = task.Task_ID;
-//     eventModal.style.display = 'block';
-// }
+
 
 closeModal.addEventListener('click', () => {
   eventModal.style.display = 'none';
@@ -362,17 +345,16 @@ async function deleteTask(taskId) {
         taskDetailsContent.innerHTML = '';
         taskDetailsSection.style.display = 'none';
 
-        // If a file URL exists, delete the file from Supabase Storage
+        
         if (taskData && taskData.file_url) {
-            const bucketName = 'files'; // Replace with your bucket name
+            const bucketName = 'files'; 
             const filePathToDelete = taskData.file_url.split(`${SUPABASE_URL}/storage/v1/object/public/${bucketName}/`)[1];
 
             if (filePathToDelete) {
                 const { error: storageError } = await db
                     .storage
                     .from(bucketName)
-                    .remove([filePathToDelete]); // Pass an array of paths
-
+                    .remove([filePathToDelete]); 
                 if (storageError) {
                     console.error('Error deleting file from storage:', storageError);
                     alert('Task deleted, but failed to delete associated file.');
@@ -410,29 +392,67 @@ function getRandomColor() {
 }
 
 async function fetchEvents() {
-  if (!currentUser) return Promise.resolve();
-  const { data, error } = await db.from('Tasks').select('*').eq('Username', currentUser);
-  if (error) {
-      console.error('Fetch error:', error);
-  } else {
-      allEvents = data.map(task => ({ ...task }));
-      renderEventList();
-      renderCalendar(currentDate);
-  }
-}
-
-async function fetchScheduleBlocks() {
     if (!currentUser) return Promise.resolve();
-    const { data, error } = await db.from('ScheduleBlocks').select('*').eq('Username', currentUser);
+    const { data, error } = await db.from('Tasks').select('*').eq('Username', currentUser);
+    if (error) {
+        console.error('Fetch error:', error);
+    } else {
+        allEvents = data.map(task => ({ ...task }));
+        renderEventList();
+        renderCalendar(currentDate);
+    }
+  }
+  async function fetchScheduleBlocks() {
+    if (!currentUser) return Promise.resolve();
+
+    const { data, error } = await db.from('schedule_blocks').select('*').eq('Username', currentUser);
+
     if (error) {
         console.error('Fetch schedule blocks error:', error);
     } else {
         allScheduleBlocks = data || [];
         console.log('Fetched schedule blocks:', allScheduleBlocks);
+        renderScheduleBlocksList(); 
     }
-  }
-  function openScheduleBlockModal() {
-    document.getElementById('scheduleBlockModal').style.display = 'block';
+}
+
+
+async function deleteBlock(blockId) {
+    try {
+        const { data, error } = await db
+            .from('schedule_blocks')
+            .delete()
+            .eq('Block_id', blockId);
+
+        if (error) {
+            console.error('Error deleting block:', error);
+        } else {
+            console.log('Block deleted successfully');
+            // Refresh the page or re-fetch the blocks
+            fetchScheduleBlocks();
+        }
+    } catch (error) {
+        console.error('Unexpected error deleting block:', error);
+    }
+}
+
+async function editBlock(block) {
+    const newTitle = prompt('Enter new title:', block.Title);
+    if (!newTitle) return;
+
+    const { error } = await db
+        .from('schedule_blocks')
+        .update({ Title: newTitle })
+        .eq('Block_id', block.Block_id);
+
+    if (error) {
+        console.error('Error updating block:', error);
+        alert('Failed to update block.');
+    } else {
+        console.log('Block updated successfully');
+        await fetchScheduleBlocks();
+        renderCalendar(currentDate);
+    }
 }
 
 
@@ -472,90 +492,59 @@ async function checkReminders() {
     }
 }
 
-
 function renderCalendar(date) {
-  if (!currentUser) {
-      monthYearText.textContent = 'Please enter Username';
-      datesContainer.innerHTML = '';
-      return;
-  }
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
-  const firstDayOfMonthDate = firstDayOfMonth.getDate();
-  const lastDayOfMonthDate = lastDayOfMonth.getDate();
+    if (!currentUser) return;
 
-  monthYearText.textContent = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
-  datesContainer.innerHTML = '';
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    const startDay = (firstDayOfMonth.getDay() + 6) % 7;
 
-  const startDay = (firstDayOfMonth.getDay() + 6) % 7;
-  for (let i = 0; i < startDay; i++) {
-      datesContainer.appendChild(document.createElement('div'));
-  }
+    monthYearText.textContent = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
+    datesContainer.innerHTML = '';
 
-  for (let i = 1; i <= lastDayOfMonthDate; i++) {
-      const currentDateForLoop = new Date(year, month, i);
-      const fullDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-      const dateDiv = document.createElement('div');
-      dateDiv.classList.add('date');
-      dateDiv.dataset.date = fullDate;
-      dateDiv.textContent = i;
-      dateDiv.style.backgroundColor = '';
-      // Highlight if there are schedule blocks for this day
-    const dayName = currentDateForLoop.toLocaleDateString('en-US', { weekday: 'long' });
-    const blocksForDay = allScheduleBlocks.filter(block => block.Days.includes(dayName));
-
-    if (blocksForDay.length > 0) {
-        dateDiv.style.border = '2px solid #4f43bd'; // Add a border to show a blocked day
-        dateDiv.title = blocksForDay.map(block => `${block.Title} (${block.Start_Time}–${block.End_Time})`).join('\n');
-       // Create a small label inside the date box
-      const blockLabel = document.createElement('div');
-      blockLabel.textContent = ` ${blocksForDay[0].Title}`;
-      blockLabel.style.fontSize = '0.6em';
-      blockLabel.style.marginTop = '5px';
-      blockLabel.style.color = '#4f43bd';
-      blockLabel.style.textAlign = 'center';
-      dateDiv.appendChild(blockLabel);
-
+    for (let i = 0; i < startDay; i++) {
+        datesContainer.appendChild(document.createElement('div'));
     }
 
+    for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+        const currentDateForLoop = new Date(year, month, i);
+        const fullDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
 
-      const activeEventsOnThisDate = allEvents.filter(event => {
-          if (!event.completed) {
-              if (event.due_date === fullDate) {
-                  return true;
-              }
-              if (event.recurring && event.recurring_pattern === 'weekly') {
-                  const eventDueDate = new Date(event.due_date);
-                  const eventDayOfWeekUTC = eventDueDate.getUTCDay();
-                  const currentDateForLoopUTC = new Date(currentDateForLoop.toISOString().slice(0, 10) + 'T00:00:00Z').getUTCDay();
+        const dateDiv = document.createElement('div');
+        dateDiv.classList.add('date');
+        dateDiv.dataset.date = fullDate;
+        dateDiv.textContent = i;
 
-                  if (eventDayOfWeekUTC === currentDateForLoopUTC) {
-                      return currentDateForLoop >= eventDueDate && currentDateForLoop <= lastDayOfMonth;
-                  }
-              } else if (event.recurring && event.recurring_pattern === 'monthly') {
-                  const eventDueDate = new Date(event.due_date);
-                  return eventDueDate.getUTCDate() === currentDateForLoop.getUTCDate() &&
-                         currentDateForLoop >= eventDueDate &&
-                         currentDateForLoop <= lastDayOfMonth;
-              }
-          }
-          return false;
-      });
+        dateDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedDate = fullDate;
+            document.getElementById('selectedDateDisplay').textContent = `Selected Date: ${selectedDate}`;
+            createTaskButton.style.display = 'block';
+        });
 
-      if (activeEventsOnThisDate.length > 0) {
-          const category = activeEventsOnThisDate[0].category || 'Uncategorized';
-          if (!categoryColors[category]) {
-              categoryColors[category] = getRandomColor();
-          }
-          dateDiv.style.backgroundColor = categoryColors[category];
-          dateDiv.style.color = 'white';
-      }
-
-      datesContainer.appendChild(dateDiv);
-  }
+        datesContainer.appendChild(dateDiv);
+    }
 }
+
+  
+  function openEditScheduleBlockModal(block) {
+    document.getElementById('scheduleBlockModal').style.display = 'flex';
+    document.getElementById('blockTitle').value = block.Title;
+    document.getElementById('startTime').value = block.Start_time.slice(0, 5);
+    document.getElementById('endTime').value = block.End_time.slice(0, 5);
+
+   
+    document.querySelectorAll('input[name="days"]').forEach(cb => cb.checked = false);
+    block.Days.forEach(day => {
+        const cb = document.querySelector(`input[name="days"][value="${day}"]`);
+        if (cb) cb.checked = true;
+    });
+
+    document.getElementById('scheduleBlockModal').dataset.editingBlockId = block.Block_id;
+}
+
 
 prevBtn.addEventListener('click', () => {
   if (currentUser) {
@@ -684,6 +673,7 @@ function showTaskDetails(taskId, isEditMode = false) {
                 <button id="edit-task-btn" data-task-id="${task.Task_ID}">Edit</button>
             `;
         }
+        
 
         taskDetailsContent.innerHTML = detailsContent;
         taskDetailsSection.style.display = 'block';
@@ -714,6 +704,7 @@ function showTaskDetails(taskId, isEditMode = false) {
                 }
             });
         }
+
 
         // Add event listeners for the main action buttons *after* setting innerHTML
         if (isEditMode) {
@@ -842,6 +833,7 @@ function showDisplayOptions(taskId, buttonElement) {
         // Add more options here as you implement them (e.g., Files, Images, Hyperlinks)
     ];
 
+
     options.forEach(option => {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -864,6 +856,7 @@ function showDisplayOptions(taskId, buttonElement) {
             localStorage.setItem(`display-${option.property}`, checkbox.checked); // Save user preference
         });
     });
+
 
     document.body.appendChild(checklistContainer);
     currentDisplayOptionsChecklist = checklistContainer;
@@ -928,26 +921,270 @@ async function uploadFile(taskId, file) {
     }
 }
 
+function updateStreakOnTaskComplete() {
+    const today = new Date().toDateString();
+    const lastCompletedDate = localStorage.getItem('lastCompletedDate');
+    let currentStreak = parseInt(localStorage.getItem('currentStreak') || '0', 10);
+
+    if (lastCompletedDate === today) return;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (lastCompletedDate === yesterday.toDateString()) {
+        currentStreak += 1;
+    } else {
+        currentStreak = 1;
+    }
+
+    localStorage.setItem('lastCompletedDate', today);
+    localStorage.setItem('currentStreak', currentStreak.toString());
+    updateStreakUI();
+}
+
+function updateStreakUI() {
+    const streak = parseInt(localStorage.getItem('currentStreak') || '0', 10);
+    const streakDisplay = document.getElementById('streak-counter');
+    if (streakDisplay) {
+        streakDisplay.textContent = `Your current streak: ${streak} day${streak !== 1 ? 's' : ''}`;
+    }
+}
+
+function generateWeeklyReport() {
+    const taskDetailsSection = document.getElementById('taskDetailsSection'); // Get taskDetailsSection
+    if (taskDetailsSection) {
+        taskDetailsSection.style.display = 'none'; // Safely hide it
+    }
+
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const completedThisWeek = allEvents.filter(task => {
+        if (!task.completed) return false;
+        const taskDate = new Date(task.due_date);
+        return taskDate >= startOfWeek && taskDate <= now;
+    });
+
+    const totalCompletedThisWeek = completedThisWeek.length;
+    const currentStreak = parseInt(localStorage.getItem('currentStreak') || '0', 10);
+
+    const reportHtml = `
+        <p><strong>Tasks Completed This Week:</strong> ${totalCompletedThisWeek}</p>
+        <p><strong>Current Streak:</strong> ${currentStreak} day${currentStreak !== 1 ? 's' : ''}</p>
+    `;
+
+    const reports = JSON.parse(localStorage.getItem('weeklyReports') || '[]');
+
+reports.push({
+    weekStart: startOfWeek.toDateString(),
+    weekEnd: now.toDateString(),
+    tasksCompleted: totalCompletedThisWeek,
+    streak: currentStreak
+});
+
+localStorage.setItem('weeklyReports', JSON.stringify(reports));
+
+    document.getElementById('weeklyReportContent').innerHTML = reportHtml;
+    document.getElementById('weeklyReportModal').style.display = 'flex';
+}
+
+function viewAllWeeklyReports() {
+    const reports = JSON.parse(localStorage.getItem('weeklyReports') || '[]');
+    if (reports.length === 0) {
+        alert("No reports found yet!");
+        return;
+    }
+
+    let reportText = "Past Weekly Reports:\n\n";
+
+    reports.forEach((r, index) => {
+        reportText += `Week ${index + 1} (${r.weekStart} ➔ ${r.weekEnd}):\n`;
+        reportText += `- Tasks Completed: ${r.tasksCompleted}\n`;
+        reportText += `- Streak: ${r.streak} day${r.streak !== 1 ? 's' : ''}\n\n`;
+    });
+
+    alert(reportText);
+}
+
+function viewAllWeeklyReports() {
+    const reports = JSON.parse(localStorage.getItem('weeklyReports') || '[]');
+    if (reports.length === 0) {
+        alert("No reports found yet!");
+        return;
+    }
+
+    let reportHtml = "<h2>Past Weekly Reports</h2>";
+
+    reports.forEach((r, index) => {
+        reportHtml += `
+            <div style="margin-bottom: 15px;">
+                <strong>Week ${index + 1} (${r.weekStart} ➔ ${r.weekEnd}):</strong><br>
+                Tasks Completed: ${r.tasksCompleted}<br>
+                Streak: ${r.streak} day${r.streak !== 1 ? 's' : ''}
+            </div>
+        `;
+    });
+
+    const weeklyReportContent = document.getElementById('weeklyReportContent');
+    if (weeklyReportContent) {
+        weeklyReportContent.innerHTML = reportHtml;
+    }
+
+    const weeklyReportModal = document.getElementById('weeklyReportModal');
+    if (weeklyReportModal) {
+        weeklyReportModal.style.display = 'flex';
+    }
+}
+
+function clearWeeklyReports() { //clear weekly reports
+    if (confirm("Are you sure you want to clear all weekly reports?")) {
+        localStorage.removeItem('weeklyReports');
+        alert("All weekly reports have been cleared!");
+    }
+}
+
+
 // Initially hide the task details section
 taskDetailsSection.style.display = 'none';
+
 window.onload = () => {
-    // Close modal when clicking the X
     const closeScheduleModal = document.getElementById('closeScheduleModal');
     if (closeScheduleModal) {
         closeScheduleModal.addEventListener('click', () => {
             document.getElementById('scheduleBlockModal').style.display = 'none';
         });
     }
-
-    // Also close modal when clicking outside of the modal content
+    document.getElementById('createScheduleBlockButton')?.addEventListener('click', () => {
+        document.getElementById('scheduleBlockModal').style.display = 'flex';
+    });
+    
     const scheduleBlockModal = document.getElementById('scheduleBlockModal');
     window.addEventListener('click', (event) => {
         if (event.target === scheduleBlockModal) {
-            scheduleBlockModal.style.display = 'none';
+            document.getElementById('scheduleBlockModal').style.display = 'none';
         }
     });
+
+    
+
+    const saveScheduleBlockButton = document.getElementById('saveScheduleBlock');
+    if (saveScheduleBlockButton) {
+        saveScheduleBlockButton.addEventListener('click', async () => {
+            const blockTitle = document.getElementById('blockTitle').value.trim();
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const dayCheckboxes = document.querySelectorAll('input[name="days"]:checked');
+            const selectedDays = Array.from(dayCheckboxes).map(cb => cb.value);
+    
+            if (!blockTitle || !startTime || !endTime || selectedDays.length === 0) {
+                alert('Please fill out all fields and select at least one day.');
+                return;
+            }
+    
+            const fixedStartTime = startTime.length === 5 ? `${startTime}:00` : startTime;
+            const fixedEndTime = endTime.length === 5 ? `${endTime}:00` : endTime;
+    
+            const newBlock = {
+                Username: currentUser,
+                Title: blockTitle,
+                Start_time: fixedStartTime,
+                End_time: fixedEndTime,
+                Days: selectedDays
+            };
+    
+            
+            const editingBlockId = document.getElementById('scheduleBlockModal').dataset.editingBlockId;
+            if (editingBlockId) {
+                
+                const { error } = await db
+                    .from('schedule_blocks')
+                    .update(newBlock)
+                    .eq('Block_id', editingBlockId);
+    
+                if (error) {
+                    console.error('Error updating schedule block:', error);
+                    alert('Failed to update block.');
+                } else {
+                    await fetchScheduleBlocks();
+                    renderCalendar(currentDate);
+                    document.getElementById('scheduleBlockModal').dataset.editingBlockId = '';
+                }
+    
+                document.getElementById('scheduleBlockModal').style.display = 'none';
+                document.getElementById('blockTitle').value = '';
+                document.getElementById('startTime').value = '';
+                document.getElementById('endTime').value = '';
+                document.querySelectorAll('input[name="days"]').forEach(cb => cb.checked = false);
+                return;
+            }
+    
+        
+            const { data, error } = await db.from('schedule_blocks').insert([newBlock]).select();
+    
+            if (error) {
+                console.error('Error saving schedule block:', error);
+                alert('Failed to save schedule block.');
+            } else {
+                console.log('Schedule block saved:', data);
+                allScheduleBlocks.push(...data);
+                renderCalendar(currentDate);
+    
+                // Close the modal and reset fields
+                document.getElementById('scheduleBlockModal').style.display = 'none';
+                document.getElementById('blockTitle').value = '';
+                document.getElementById('startTime').value = '';
+                document.getElementById('endTime').value = '';
+                document.querySelectorAll('input[name="days"]').forEach(cb => cb.checked = false);
+            }
+        });
+    }
+    
 };
 
+
+const generateReportBtn = document.getElementById('generateReportBtn');
+const viewReportsBtn = document.getElementById('viewReportsBtn');
+const closeReportModalBtn = document.getElementById('closeReportModal');
+const weeklyReportModal = document.getElementById('weeklyReportModal');
+const clearReportsBtn = document.getElementById('clearReportsBtn');
+
+
+function attachEventListeners() {
+    if (generateReportBtn) {
+        generateReportBtn.addEventListener('click', generateWeeklyReport);
+    } else {
+        console.error("Error: #generateReportBtn not found");
+    }
+
+    if (viewReportsBtn) {
+        viewReportsBtn.addEventListener('click', viewAllWeeklyReports);
+    } else {
+        console.error("Error: #viewReportsBtn not found");
+    }
+
+    if (clearReportsBtn) {
+        clearReportsBtn.addEventListener('click', clearWeeklyReports);
+    } else {
+        console.error("Error: #clearReportsBtn not found");
+    }
+
+    if (closeReportModalBtn) {
+        closeReportModalBtn.addEventListener('click', () => {
+            weeklyReportModal.style.display = 'none';
+        });
+    } else {
+        console.error("Error: #closeReportModal not found");
+    }
+}
+
+document.addEventListener('DOMContentLoaded', attachEventListeners);
+
+
+
+
+updateStreakUI();
 setInterval(checkReminders, 30000); // check every 30 seconds
 
 function updateProgressBar() {
@@ -963,3 +1200,48 @@ function updateProgressBar() {
     progressText.textContent = `${percent}% Complete`;
 }
 
+function renderScheduleBlocksList() {
+    const scheduleBlocksList = document.getElementById('scheduleBlocksList');
+    if (!scheduleBlocksList) return;
+    scheduleBlocksList.innerHTML = '';
+
+    if (allScheduleBlocks.length === 0) {
+        scheduleBlocksList.innerHTML = '<p>No schedule blocks yet.</p>';
+        return;
+    }
+
+    allScheduleBlocks.forEach(block => {
+        const blockDiv = document.createElement('div');
+        blockDiv.classList.add('schedule-block-item');
+
+        blockDiv.innerHTML = `
+            <strong>${block.Title}</strong><br>
+            ${block.Start_time.slice(0, 5)} - ${block.End_time.slice(0, 5)}<br>
+            Days: ${Array.isArray(block.Days) ? block.Days.join(', ') : block.Days}
+        `;
+
+        const btnContainer = document.createElement('div');
+        btnContainer.classList.add('block-buttons');
+
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', () => openEditScheduleBlockModal(block));
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', async () => {
+            const confirmDelete = confirm(`Delete block "${block.Title}"?`);
+            if (confirmDelete) {
+                await deleteBlock(block.Block_id);
+                await fetchScheduleBlocks();
+                renderScheduleBlocksList();
+                renderCalendar(currentDate);
+            }
+        });
+
+        btnContainer.appendChild(editBtn);
+        btnContainer.appendChild(deleteBtn);
+        blockDiv.appendChild(btnContainer);
+        scheduleBlocksList.appendChild(blockDiv);
+    });
+}

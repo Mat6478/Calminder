@@ -55,6 +55,8 @@
     </style>
 </head>
 
+
+
 <body>
     <div id="overlay"></div>
     <div id="loginScreen" class="login-screen">
@@ -69,7 +71,10 @@
       </div>
       
 
-    <div class="main-container">
+
+
+      
+      <div class="main-container">
         <div id="taskContainer" class="draggable resizable">
             <div id="progressContainer">
                 <div id="progressBar">
@@ -84,14 +89,14 @@
             </div>
             <div id="eventList"></div>
         </div>
-
+    
         <div class="calendar draggable resizable">
             <div class="header">
                 <button id="prevBtn"><i class="fa-solid fa-chevron-left"></i></button>
                 <div class="monthYear" id="monthYear"></div>
                 <p id="selectedDateDisplay" class="selected-date-display">Selected Date: None</p>
                 <button id="createTaskButton" class="header-button" style="display:none;">Create Task</button>
-                <button id="createScheduleBlockButton" class="header-button" onclick="openScheduleBlockModal()">Create Schedule Block</button>             
+                <button id="createScheduleBlockButton" class="header-button">Create Schedule Block</button>       
                 <button id="nextBtn"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
             <div class="days">
@@ -105,6 +110,13 @@
             </div>
             <div class="dates" id="dates"></div>
         </div>
+    
+        <div id="scheduleBlocksContainer" class="draggable resizable">
+            <h2>Schedule Blocks</h2>
+            <div id="scheduleBlocksList"></div>
+        </div>
+    </div>
+    
 
         <div id="taskDetailsSection">
             <h2>Task Details</h2>
@@ -112,7 +124,11 @@
                 </div>
         </div>
     </div>
-
+    <div id="reportButtons">
+        <button id="generateReportBtn" class="report-btn">Generate Weekly Report</button>
+        <button id="viewReportsBtn" class="report-btn">View Past Weekly Reports</button>
+        <button id="clearReportsBtn" class="report-btn">Clear Weekly Reports</button>
+    </div>
 
     <div id="eventModal" class="modal" style="display: none;">
         <div class="modal-content" id="modalContent">
@@ -151,11 +167,17 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script src="main.js"></script>
+    <div id="weeklyReportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+        <span id="closeReportModal" class="close">&times;</span>
+          <h2>Weekly Report</h2>
+          <div id="weeklyReportContent" style="margin-top: 10px;"></div>
+        </div>
+      </div>
 
 
-    <!-- Schedule Block Modal -->
+
+          <!-- Schedule Block Modal -->
 <div id="scheduleBlockModal" class="modal" style="display: none;">
     <div class="modal-content">
       <span id="closeScheduleModal" class="close">&times;</span>
@@ -184,6 +206,45 @@
     </div>
   </div>
   
+
+  <!-- Edit Schedule Block Modal -->
+<div id="editScheduleBlockModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span id="closeEditScheduleModal" class="close">&times;</span>
+    <h2>Edit Schedule Block</h2>
+
+    <input type="text" id="editBlockTitle" placeholder="Block Title" />
+
+    <label>Start Time:</label>
+    <input type="time" id="editStartTime" />
+
+    <label>End Time:</label>
+    <input type="time" id="editEndTime" />
+
+    <div>
+      <p>Days:</p>
+      <label><input type="checkbox" name="editDays" value="Monday"> Monday</label>
+      <label><input type="checkbox" name="editDays" value="Tuesday"> Tuesday</label>
+      <label><input type="checkbox" name="editDays" value="Wednesday"> Wednesday</label>
+      <label><input type="checkbox" name="editDays" value="Thursday"> Thursday</label>
+      <label><input type="checkbox" name="editDays" value="Friday"> Friday</label>
+      <label><input type="checkbox" name="editDays" value="Saturday"> Saturday</label>
+      <label><input type="checkbox" name="editDays" value="Sunday"> Sunday</label>
+    </div>
+
+    <button id="updateScheduleBlock">Update Block</button>
+    <button id="deleteScheduleBlock" style="background-color: #dc3545;">Delete Block</button>
+  </div>
+</div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="main.js"></script>
 </body>
 
 </html>
+
+
+    
+
+

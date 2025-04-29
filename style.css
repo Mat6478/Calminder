@@ -516,3 +516,94 @@ body {
     font-size: 0.9em;
     color: #333;
 }
+
+/* Wrapper for buttons */
+#reportButtons {
+    position: fixed; 
+    top: 10px;      
+    left: 10px;     
+    display: flex;  
+    flex-direction: column; /* Stack the buttons vertically */
+    gap: 10px;     
+    z-index: 1000;   
+}
+
+/* Styling for each button */
+.report-btn {
+    background-color: #4CAF50; /* Green color */
+    color: white;
+    border: none;
+    padding: 8px 12px; /* Adjust the size */
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px; /* Smaller text */
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+    width: 120px; /* Make buttons narrower */
+}
+
+
+/* Button hover effect */
+.report-btn:hover {
+    background-color: #45a049; /* Slightly darker green */
+    transform: scale(1.05); /* Grow effect */
+}
+
+/* Button active effect */
+.report-btn:active {
+    transform: scale(0.98); /* Shrink effect on click */
+}
+
+.date button {
+    background-color: #4f43bd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.date button:hover {
+    background-color: #3c36a2;
+}
+
+#scheduleBlocksContainer {
+    width: 250px;
+    height: calc(100vh - 300px);
+    overflow-y: auto;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    margin-right: 20px;
+}
+
+#scheduleBlocksList {
+    margin-top: 10px;
+}
+
+.schedule-block-item {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #f9f9f9;
+}
+
+.block-buttons {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.block-buttons button {
+    padding: 4px 8px;
+    font-size: 0.8em;
+    background-color: #4f43bd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
