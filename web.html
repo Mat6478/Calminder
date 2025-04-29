@@ -7,11 +7,82 @@
     <title>Calendar</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        #usernamePrompt {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        #usernameInput {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #usernameSubmit {
+            padding: 10px 15px;
+            background-color: #4f43bd;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Existing styles from style.css will still apply */
+    </style>
 </head>
 
+
+
 <body>
-    <div class="main-wrapper">
-        <div id="taskContainer">
+    <div id="overlay"></div>
+    <div id="loginScreen" class="login-screen">
+        <div class="login-box">
+          <h1>Welcome to My Calendar App</h1>
+          <input type="text" id="loginUsername" placeholder="Username" />
+          <input type="email" id="loginEmail" placeholder="Email (for signup only)" />
+          <input type="password" id="loginPassword" placeholder="Password" />
+          <button id="loginButton">Login / Signup</button>
+          <p id="loginError" class="error-message"></p>
+        </div>
+      </div>
+      
+
+
+
+      
+    <div class="main-container">
+        <div id="taskContainer" class="draggable resizable">
+            <div id="progressContainer">
+                <div id="progressBar">
+                    <div id="progressFill"></div>
+                </div>
+                <p id="progressText">0% Complete</p>
+            </div>
+            
             <div id="tabs">
                 <button id="activeTab" class="tab active">Active Tasks</button>
                 <button id="completedTab" class="tab">Completed Tasks</button>
@@ -19,11 +90,13 @@
             <div id="eventList"></div>
         </div>
 
-        <div class="calendar">
+        <div class="calendar draggable resizable">
             <div class="header">
                 <button id="prevBtn"><i class="fa-solid fa-chevron-left"></i></button>
                 <div class="monthYear" id="monthYear"></div>
                 <p id="selectedDateDisplay" class="selected-date-display">Selected Date: None</p>
+                <button id="createTaskButton" class="header-button" style="display:none;">Create Task</button>
+                <button id="createScheduleBlockButton" class="header-button" onclick="openScheduleBlockModal()">Create Schedule Block</button>             
                 <button id="nextBtn"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
             <div class="days">
@@ -37,22 +110,101 @@
             </div>
             <div class="dates" id="dates"></div>
         </div>
+
+        <div id="taskDetailsSection">
+            <h2>Task Details</h2>
+            <div id="taskDetailsContent">
+                </div>
+        </div>
+    </div>
+    <div id="reportButtons">
+        <button id="generateReportBtn" class="report-btn">Generate Weekly Report</button>
+        <button id="viewReportsBtn" class="report-btn">View Past Weekly Reports</button>
+        <button id="clearReportsBtn" class="report-btn">Clear Weekly Reports</button>
     </div>
 
     <div id="eventModal" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content" id="modalContent">
             <span id="closeModal" class="close">&times;</span>
-            <h2>Add Event</h2>
+            <h2 id="modalTitle">Add Event</h2>
             <p id="selectedDate"></p>
             <input type="text" id="eventTitle" placeholder="Event Title" />
-            <input type="time" id="eventTime" />
             <textarea id="eventDescription" placeholder="Event Description"></textarea>
             <textarea id="eventCategory" placeholder="Event Category"></textarea>
+            <div id="reminderOptions">
+                <p>Remind me:</p>
+                <label><input type="checkbox" name="reminder" value="14"> 2 weeks before</label><br>
+                <label><input type="checkbox" name="reminder" value="7"> 1 week before</label><br>
+                <label><input type="checkbox" name="reminder" value="3"> 3 days before</label><br>
+                <label><input type="checkbox" name="reminder" value="1"> 1 day before</label><br>
+                <label><input type="checkbox" name="reminder" value="0"> Day of event</label><br>
+                <label>
+                  <input type="checkbox" id="customReminderCheck">
+                  Custom:
+                  <input type="datetime-local" id="customReminderTime" disabled>
+                </label>
+            </div>
+            
             <button id="saveEvent">Save Event</button>
+            <button id="deleteEvent" style="display: none;">Delete Event</button>
+            <label for="recurring">Recurring:</label>
+            <input type="checkbox" id="recurring">
+
+            <div id="recurringOptions" style="display: none; margin-left: 20px;">
+                <label for="recurringPattern">Repeat:</label>
+                <select id="recurringPattern">
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
         </div>
     </div>
 
-    <script src="main.js"></script>
+    <div id="weeklyReportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+        <span id="closeReportModal" class="close">&times;</span>
+          <h2>Weekly Report</h2>
+          <div id="weeklyReportContent" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+
+
+
+          <!-- Schedule Block Modal -->
+<div id="scheduleBlockModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span id="closeScheduleModal" class="close">&times;</span>
+      <h2>Create Schedule Block</h2>
+  
+      <input type="text" id="blockTitle" placeholder="Block Title (e.g., Gym Time)" />
+  
+      <label>Start Time:</label>
+      <input type="time" id="startTime" />
+  
+      <label>End Time:</label>
+      <input type="time" id="endTime" />
+  
+      <div>
+        <p>Days:</p>
+        <label><input type="checkbox" name="days" value="Monday"> Monday</label>
+        <label><input type="checkbox" name="days" value="Tuesday"> Tuesday</label>
+        <label><input type="checkbox" name="days" value="Wednesday"> Wednesday</label>
+        <label><input type="checkbox" name="days" value="Thursday"> Thursday</label>
+        <label><input type="checkbox" name="days" value="Friday"> Friday</label>
+        <label><input type="checkbox" name="days" value="Saturday"> Saturday</label>
+        <label><input type="checkbox" name="days" value="Sunday"> Sunday</label>
+      </div>
+  
+      <button id="saveScheduleBlock">Save Block</button>
+    </div>
+  </div>
+  
 </body>
 
 </html>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="main.js"></script>
+
+
