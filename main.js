@@ -1,12 +1,11 @@
-// Supabase configuration
+
+
+
 const SUPABASE_URL = 'https://kbpubtadcwukqubwhmge.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImticHVidGFkY3d1a3F1YndobWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM1Mjc3NjcsImV4cCI6MjA1OTEwMzc2N30.0__aQKfomiltnoLLKUH_KhfK7IgtlZ0JezZBrvwNpRI';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Ask for browser notification permission when page loads
-if ('Notification' in window && Notification.permission !== 'granted') {
-    Notification.requestPermission();
-}
+
 
 const usernamePrompt = document.getElementById('usernamePrompt');
 const usernameInput = document.getElementById('usernameInput');
@@ -27,25 +26,25 @@ const eventTitle = document.getElementById('eventTitle');
 const eventDescription = document.getElementById('eventDescription');
 const eventCategory = document.getElementById('eventCategory');
 //const reminderTimeInput = document.getElementById('reminderTime');
-const customReminderCheck = document.getElementById('customReminderCheck');
-const customReminderTime = document.getElementById('customReminderTime');
-customReminderCheck.addEventListener('change', () => {
-  customReminderTime.disabled = !customReminderCheck.checked;
-});
+//const customReminderCheck = document.getElementById('customReminderCheck');
+//const customReminderTime = document.getElementById('customReminderTime');
+//customReminderCheck.addEventListener('change', () => {
+//customReminderTime.disabled = !customReminderCheck.checked;
+//});
 const saveEventBtn = document.getElementById('saveEvent');
 const closeModal = document.getElementById('closeModal');
 const eventList = document.getElementById('eventList');
 const activeTab = document.getElementById('activeTab');
 const completedTab = document.getElementById('completedTab');
-const recurringCheckbox = document.getElementById('recurring');
-const recurringOptionsDiv = document.getElementById('recurringOptions');
+//const recurringCheckbox = document.getElementById('recurring');
+//const recurringOptionsDiv = document.getElementById('recurringOptions');
 const createTaskButton = document.getElementById('createTaskButton');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 
-recurringCheckbox.addEventListener('change', () => {
-  recurringOptionsDiv.style.display = recurringCheckbox.checked ? 'block' : 'none';
-});
+//recurringCheckbox.addEventListener('change', () => {
+//  recurringOptionsDiv.style.display = recurringCheckbox.checked ? 'block' : 'none';
+//});
 
 let currentDate = new Date();
 let selectedDate = '';
@@ -92,7 +91,7 @@ loginButton.addEventListener('click', async () => {
             loginScreen.style.display = 'none';
             overlay.style.display = 'none';
             Promise.all([fetchEvents(), fetchScheduleBlocks()]).then(() => {
-                renderCalendar(currentDate);
+                refreshAll();
                 calendarInitialized = true;
             });
         } else {
@@ -126,7 +125,7 @@ loginButton.addEventListener('click', async () => {
             loginScreen.style.display = 'none';
             overlay.style.display = 'none';
             Promise.all([fetchEvents(), fetchScheduleBlocks()]).then(() => {
-                renderCalendar(currentDate);
+                refreshAll();
                 calendarInitialized = true;
             });
         }
@@ -149,6 +148,15 @@ function renderEventList() {
         // Format date
         const dueDate = new Date(e.due_date);
         const dateStr = dueDate.toLocaleDateString();
+        let timeStr = 'No Time Set';
+
+        if (e.task_time) {
+            // Create a Date object using the date and time components
+            const dateTime = new Date(`${e.due_date}T${e.task_time}`);
+
+            // Format the time in the user's local timezone
+            timeStr = dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
 
         // Build the HTML
         item.innerHTML = `
@@ -157,6 +165,7 @@ function renderEventList() {
                 <p class="event-description">Description: ${e.description || 'None'}</p>
                 <p class="event-category">Category: ${e.category || 'Uncategorized'}</p>
                 <p class="event-date">Date: ${dateStr}</p>
+                <p class="event-time">Time: ${timeStr}</p>
             </div>
             <div class="event-buttons">
                 <button class="edit-btn" data-task-id="${e.Task_ID}">Edit</button>
@@ -165,24 +174,23 @@ function renderEventList() {
             </div>
         `;
 
-      // Event listener for the Complete button
-      const completeButton = item.querySelector('.complete-btn');
-      completeButton.addEventListener('click', async (event) => {
-          event.stopPropagation();
-          const taskIdToUpdate = event.target.dataset.taskId;
-          const taskToUpdate = allEvents.find(task => task.Task_ID === taskIdToUpdate);
-          if (taskToUpdate) {
-            const updated = !taskToUpdate.completed;
-            await db.from('Tasks').update({ completed: updated }).eq('Task_ID', taskIdToUpdate);
-            if (updated === true) updateStreakOnTaskComplete();
-            taskToUpdate.completed = updated;
-            renderEventList();
-            renderCalendar(currentDate);
-        }
-    });
+        // Event listener for the Complete button
+        const completeButton = item.querySelector('.complete-btn');
+        completeButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const taskIdToUpdate = event.target.dataset.taskId;
+            const taskToUpdate = allEvents.find(task => task.Task_ID === taskIdToUpdate);
+            if (taskToUpdate) {
+                const updated = !taskToUpdate.completed;
+                await db.from('Tasks').update({ completed: updated }).eq('Task_ID', taskIdToUpdate);
+                if (updated === true) updateStreakOnTaskComplete();
+                taskToUpdate.completed = updated;
+                refreshAll();
+            }
+        });
 
-      // Event listener for the Edit button
-      const editButton = item.querySelector('.edit-btn');
+        // Event listener for the Edit button
+        const editButton = item.querySelector('.edit-btn');
         editButton.addEventListener('click', (event) => {
             event.stopPropagation();
             const taskIdToEdit = event.target.dataset.taskId;
@@ -196,26 +204,37 @@ function renderEventList() {
             const taskId = event.target.dataset.taskId;
             showTaskDetails(taskId, false); // Pass false for view-only mode
         });
-        
+
         eventList.appendChild(item);
     });
-
 }
-
-function openModal(date) {
+function createTask(date) {
     selectedDate = date;
-    document.getElementById('selectedDate').textContent = `Selected Date: ${selectedDate}`; // Corrected ID
+    document.getElementById('selectedDate').textContent = `Selected Date: ${selectedDate}`;
     eventTitle.value = '';
     eventDescription.value = '';
     eventCategory.value = '';
-    recurringCheckbox.checked = false;
-    recurringOptionsDiv.style.display = 'none';
-    document.getElementById('modalTitle').textContent = 'Add Event';
-    document.getElementById('saveEvent').textContent = 'Save Event';
+    document.getElementById('taskTime').value = ''; // Clear the time input
+    document.getElementById('modalTitle').textContent = 'Add Task';
+    document.getElementById('saveEvent').textContent = 'Save Task';
     document.getElementById('deleteEvent').style.display = 'none'; // Ensure delete button is hidden in create mode
     document.getElementById('deleteEvent').dataset.taskId = '';
     eventModal.style.display = 'block';
 }
+// function createTask(date) {
+//     selectedDate = date;
+//     document.getElementById('selectedDate').textContent = `Selected Date: ${selectedDate}`; // Corrected ID
+//     eventTitle.value = '';
+//     eventDescription.value = '';
+//     eventCategory.value = '';
+//     recurringCheckbox.checked = false;
+//     recurringOptionsDiv.style.display = 'none';
+//     document.getElementById('modalTitle').textContent = 'Add Event';
+//     document.getElementById('saveEvent').textContent = 'Save Event';
+//     document.getElementById('deleteEvent').style.display = 'none'; // Ensure delete button is hidden in create mode
+//     document.getElementById('deleteEvent').dataset.taskId = '';
+//     eventModal.style.display = 'block';
+// }
 
 
 
@@ -232,84 +251,141 @@ saveEventBtn.removeEventListener('click', saveNewOrEditedEvent);
 saveEventBtn.addEventListener('click', saveNewOrEditedEvent);
 
 async function saveNewOrEditedEvent() {
-  if (!currentUser) return;
-  const isRecurring = recurringCheckbox.checked;
-  const pattern = isRecurring ? document.getElementById('recurringPattern').value : null;
+    if (!currentUser) return;
 
-  // Collect selected preset reminders
-const reminderOptions = [...document.querySelectorAll('input[name="reminder"]:checked')].map(input => parseInt(input.value));
+    const taskTimeValue = document.getElementById('taskTime').value;
 
-// Handle custom reminder
-const reminders = reminderOptions.map(daysBefore => {
-  const reminderDate = new Date(selectedDate);
-  reminderDate.setDate(reminderDate.getDate() - daysBefore);
-  return reminderDate.toISOString();
-});
+    const updatedTask = {
+        title: eventTitle.value,
+        description: eventDescription.value,
+        category: eventCategory.value,
+        due_date: selectedDate, // Date part
+        task_time: taskTimeValue || null, // Time part, can be null if no time is set
+        completed: false,
+        Username: currentUser // Ensure currentUser is used
+    };
 
-if (customReminderCheck.checked && customReminderTime.value) {
-  reminders.push(new Date(customReminderTime.value).toISOString());
+    const taskIdToUpdate = document.getElementById('deleteEvent').dataset.taskId;
+
+    if (taskIdToUpdate) {
+        const { error } = await db
+            .from('Tasks')
+            .update(updatedTask)
+            .eq('Task_ID', taskIdToUpdate);
+
+        if (error) {
+            console.error('Update error:', error);
+        } else {
+            const index = allEvents.findIndex(task => task.Task_ID === taskIdToUpdate);
+            if (index !== -1) {
+                allEvents[index] = { ...allEvents[index], ...updatedTask };
+            }
+            refreshAll();
+            renderDayDetails(selectedDate);
+        }
+        document.getElementById('modalTitle').textContent = 'Add Task';
+        document.getElementById('saveEvent').textContent = 'Save Task';
+        document.getElementById('deleteEvent').style.display = 'none';
+        document.getElementById('deleteEvent').dataset.taskId = '';
+    } else {
+        const { data, error } = await db
+            .from('Tasks')
+            .insert([updatedTask])
+            .select();
+
+        if (error) {
+            console.error('Insert error:', error);
+        } else if (data && data.length > 0) {
+            console.log('Task saved:', data);
+            allEvents.push(data[0]);
+            refreshAll();
+            renderDayDetails(selectedDate);
+        } else {
+            console.warn('Insert succeeded but returned no data.');
+        }
+    }
+
+    closeModalFunc();
 }
 
-  const updatedTask = {
-      title: eventTitle.value,
-      description: eventDescription.value,
-      category: eventCategory.value,
-      due_date: selectedDate,
-      recurring: isRecurring,
-      recurring_pattern: pattern,
-      completed: false,
-      Username: currentUser // Ensure currentUser is used
-  };
 
-  const taskIdToUpdate = document.getElementById('deleteEvent').dataset.taskId;
+// async function saveNewOrEditedEvent() {
+//   if (!currentUser) return;
+//   const isRecurring = recurringCheckbox.checked;
+//   const pattern = isRecurring ? document.getElementById('recurringPattern').value : null;
 
-  if (taskIdToUpdate) {
-      const { error } = await db
-          .from('Tasks')
-          .update(updatedTask)
-          .eq('Task_ID', taskIdToUpdate);
+//   // Collect selected preset reminders
+// const reminderOptions = [...document.querySelectorAll('input[name="reminder"]:checked')].map(input => parseInt(input.value));
 
-      if (error) {
-          console.error('Update error:', error);
-      } else {
-          const index = allEvents.findIndex(task => task.Task_ID === taskIdToUpdate);
-          if (index !== -1) {
-              allEvents[index] = { ...allEvents[index], ...updatedTask };
-          }
-          renderEventList();
-          renderCalendar(currentDate);
-      }
-      document.getElementById('modalTitle').textContent = 'Add Event';
-      document.getElementById('saveEvent').textContent = 'Save Event';
-      document.getElementById('deleteEvent').style.display = 'none';
-      document.getElementById('deleteEvent').dataset.taskId = '';
-  } else {
-      const { data, error } = await db
-          .from('Tasks')
-          .insert([updatedTask])
-          .select();
+// // Handle custom reminder
+// const reminders = reminderOptions.map(daysBefore => {
+//   const reminderDate = new Date(selectedDate);
+//   reminderDate.setDate(reminderDate.getDate() - daysBefore);
+//   return reminderDate.toISOString();
+// });
 
-      if (error) {
-          console.error('Insert error:', error);
-      } else if (data && data.length > 0) {
-          console.log('Event saved:', data);
-          allEvents.push(data[0]);
-          renderEventList();
-          renderCalendar(currentDate);
-          const insertedTaskId = data[0].Task_ID;
-          const reminderRows = reminders.map(time => ({
-          Task_ID: insertedTaskId,
-          reminder_time: time
-}));
-await db.from('Reminders').insert(reminderRows);
+// if (customReminderCheck.checked && customReminderTime.value) {
+//   reminders.push(new Date(customReminderTime.value).toISOString());
+// }
 
-      } else {
-          console.warn('Insert succeeded but returned no data.');
-      }
-  }
+//   const updatedTask = {
+//       title: eventTitle.value,
+//       description: eventDescription.value,
+//       category: eventCategory.value,
+//       due_date: selectedDate,
+//       recurring: isRecurring,
+//       recurring_pattern: pattern,
+//       completed: false,
+//       Username: currentUser // Ensure currentUser is used
+//   };
 
-  closeModalFunc();
-}
+//   const taskIdToUpdate = document.getElementById('deleteEvent').dataset.taskId;
+
+//   if (taskIdToUpdate) {
+//       const { error } = await db
+//           .from('Tasks')
+//           .update(updatedTask)
+//           .eq('Task_ID', taskIdToUpdate);
+
+//       if (error) {
+//           console.error('Update error:', error);
+//       } else {
+//           const index = allEvents.findIndex(task => task.Task_ID === taskIdToUpdate);
+//           if (index !== -1) {
+//               allEvents[index] = { ...allEvents[index], ...updatedTask };
+//           }
+//           refreshAll();
+//       }
+//       document.getElementById('modalTitle').textContent = 'Add Event';
+//       document.getElementById('saveEvent').textContent = 'Save Event';
+//       document.getElementById('deleteEvent').style.display = 'none';
+//       document.getElementById('deleteEvent').dataset.taskId = '';
+//   } else {
+//       const { data, error } = await db
+//           .from('Tasks')
+//           .insert([updatedTask])
+//           .select();
+
+//       if (error) {
+//           console.error('Insert error:', error);
+//       } else if (data && data.length > 0) {
+//           console.log('Event saved:', data);
+//           allEvents.push(data[0]);
+//           refreshAll();
+//           const insertedTaskId = data[0].Task_ID;
+//           const reminderRows = reminders.map(time => ({
+//           Task_ID: insertedTaskId,
+//           reminder_time: time
+// }));
+// await db.from('Reminders').insert(reminderRows);
+
+//       } else {
+//           console.warn('Insert succeeded but returned no data.');
+//       }
+//   }
+
+//   closeModalFunc();
+// }
 
 async function deleteTask(taskId) {
     if (!currentUser || !taskId) return;
@@ -340,8 +416,7 @@ async function deleteTask(taskId) {
         console.log('Task deleted:', taskId);
         // Remove the task from the allEvents array
         allEvents = allEvents.filter(task => task.Task_ID !== taskId);
-        renderEventList();
-        renderCalendar(currentDate);
+        refreshAll();
         taskDetailsContent.innerHTML = '';
         taskDetailsSection.style.display = 'none';
 
@@ -367,17 +442,66 @@ async function deleteTask(taskId) {
     }
 }
 
+// Updated date click listener in main.js
 datesContainer.addEventListener('click', (event) => {
-  if (event.target.classList.contains('date') && !event.target.classList.contains('inactive')) {
-      selectedDate = event.target.dataset.date;
-      document.getElementById('selectedDateDisplay').textContent = `Selected Date: ${selectedDate}`; // Corrected ID
-      createTaskButton.style.display = 'block';
-  }
+    let targetElement = event.target;
+
+    // Traverse up the DOM tree to find the .date-box
+    while (targetElement && !targetElement.classList.contains('date-box')) {
+        targetElement = targetElement.parentElement;
+    }
+
+    // If we found a .date-box
+    if (targetElement) {
+        const isInactive = targetElement.classList.contains('inactive');
+        const clickedDate = targetElement.dataset.date;
+        const [year, month, day] = clickedDate.split('-').map(Number);
+        const dateObject = new Date(year, month - 1, day); // Month is 0-indexed
+
+        // Existing functionality for task creation date selection
+        if (!isInactive) {
+            selectedDate = clickedDate;
+            document.getElementById('selectedDateDisplay').textContent = `Selected Date: ${selectedDate}`;
+            createTaskButton.style.display = 'block';
+
+            // Visual selection for task creation
+            const previouslyActiveTaskDate = document.querySelector('.date-box.active-task-selection');
+            if (previouslyActiveTaskDate) {
+                previouslyActiveTaskDate.classList.remove('active-task-selection');
+            }
+            targetElement.classList.add('active-task-selection');
+        }
+
+        // New functionality for day details section
+        if (!isInactive) {
+            const isCurrentlyDisplayed = displayedDays.hasOwnProperty(clickedDate);
+
+            if (isCurrentlyDisplayed) {
+                delete displayedDays[clickedDate];
+                if (activeDayTab === clickedDate && Object.keys(displayedDays).length > 0) {
+                    activeDayTab = Object.keys(displayedDays)[0];
+                } else if (Object.keys(displayedDays).length === 0) {
+                    activeDayTab = null;
+                    dayDetailsContent.innerHTML = '<p>Click on a day to see its details here.</p>';
+                }
+                refreshAll();
+                if (activeDayTab) {
+                    renderDayDetails(activeDayTab);
+                } else {
+                    dayDetailsContent.innerHTML = '<p>Click on a day to see its details here.</p>';
+                }
+                // Remove visual indication for details view if unselected
+                targetElement.classList.remove('active-details-view');
+            } else {
+                showDayDetails(dateObject);
+                targetElement.classList.add('active-details-view');
+            }
+        }
+    }
 });
 
 createTaskButton.addEventListener('click', () => {
-  console.log('Selected Date before opening modal:', selectedDate);
-  openModal(selectedDate);
+  createTask(selectedDate);
   createTaskButton.style.display = 'none';
 });
 
@@ -399,14 +523,13 @@ async function fetchEvents() {
         console.error('Fetch error:', error);
     } else {
         allEvents = data.map(task => ({ ...task }));
-        renderEventList();
-        renderCalendar(currentDate);
+        refreshAll();
     }
   }
 
 async function fetchScheduleBlocks() {
     if (!currentUser) return Promise.resolve();
-    const { data, error } = await db.from('Schedule Blocks').select('*').eq('Username', currentUser);
+    const { data, error } = await db.from('schedule_blocks').select('*').eq('Username', currentUser);
     if (error) {
         console.error('Fetch schedule blocks error:', error);
     } else {
@@ -481,7 +604,7 @@ function renderCalendar(date) {
     const currentDateForLoop = new Date(year, month, i);
     const fullDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
     const dateDiv = document.createElement('div');
-    dateDiv.classList.add('date');
+    dateDiv.classList.add('date-box');
     dateDiv.dataset.date = fullDate;
     dateDiv.textContent = i;
     dateDiv.style.backgroundColor = '';
@@ -489,20 +612,19 @@ function renderCalendar(date) {
     const dayName = currentDateForLoop.toLocaleDateString('en-US', { weekday: 'long' });
     const blocksForDay = allScheduleBlocks.filter(block => block.Days.includes(dayName));
 
-    if (blocksForDay.length > 0) {
-        dateDiv.style.border = '2px solid #4f43bd'; // Add a border to show a blocked day
-        dateDiv.title = blocksForDay.map(block => `${block.Title} (${block.Start_Time}–${block.End_Time})`).join('\n');
-       // Create a small label inside the date box
-      const blockLabel = document.createElement('div');
-      blockLabel.textContent = ` ${blocksForDay[0].Title}`;
-      blockLabel.style.fontSize = '0.6em';
-      blockLabel.style.marginTop = '5px';
-      blockLabel.style.color = '#4f43bd';
-      blockLabel.style.textAlign = 'center';
-      dateDiv.appendChild(blockLabel);
+if (blocksForDay.length > 0) {
+            dateDiv.style.border = '2px solid #4f43bd';
+            dateDiv.title = blocksForDay.map(block => `${block.Title} (${block.Start_Time}–${block.End_Time})`).join('\n');
+            const blockLabel = document.createElement('div');
+            blockLabel.textContent = ` ${blocksForDay[0].Title}`;
+            blockLabel.style.fontSize = '0.6em';
+            blockLabel.style.marginTop = '2px';
+            blockLabel.style.color = '#4f43bd';
+            blockLabel.style.textAlign = 'left';
+            blockLabel.paddingLeft = '5px';
+            dateDiv.appendChild(blockLabel);
+        }
 
-    
-  }
 
     const activeEventsOnThisDate = allEvents.filter(event => {
         if (!event.completed) {
@@ -528,12 +650,42 @@ function renderCalendar(date) {
     });
 
     if (activeEventsOnThisDate.length > 0) {
-        const category = activeEventsOnThisDate[0].category || 'Uncategorized';
-        if (!categoryColors[category]) {
-            categoryColors[category] = getRandomColor();
+        let displayedCount = 0;
+        // Append event titles to the date box
+        for (let i = 0; i < activeEventsOnThisDate.length; i++) {
+            const event = activeEventsOnThisDate[i];
+            const eventTitleDiv = document.createElement('div');
+            eventTitleDiv.classList.add('event-indicator');
+            eventTitleDiv.textContent = event.title || 'Unnamed Event';
+            const category = event.category || 'Uncategorized';
+            if (!categoryColors[category]) {
+                categoryColors[category] = getRandomColor();
+            }
+            eventTitleDiv.style.backgroundColor = categoryColors[category];
+            eventTitleDiv.style.color = 'white';
+            eventTitleDiv.style.fontSize = '0.7em';
+            eventTitleDiv.style.padding = '2px 5px';
+            eventTitleDiv.style.borderRadius = '5px';
+            eventTitleDiv.style.marginBottom = '2px';
+            eventTitleDiv.style.textAlign = 'left';
+            eventTitleDiv.title = event.title; // Add tooltip for full title
+            dateDiv.appendChild(eventTitleDiv);
+            displayedCount++;
+    
+            if (displayedCount >= 2 && activeEventsOnThisDate.length > 2) {
+                const moreIndicator = document.createElement('div');
+                moreIndicator.textContent = `+${activeEventsOnThisDate.length - 2} more`;
+                moreIndicator.style.fontSize = '0.7em';
+                moreIndicator.style.color = '#555';
+                moreIndicator.style.textAlign = 'left';
+                moreIndicator.paddingLeft = '5px';
+                dateDiv.appendChild(moreIndicator);
+                break; // Exit the loop after adding the "+n more"
+            }
         }
-        dateDiv.style.backgroundColor = categoryColors[category];
-        dateDiv.style.color = 'white';
+        // Remove the background color styling from the dateDiv itself
+        dateDiv.style.backgroundColor = '';
+        dateDiv.style.color = 'black'; // Ensure day number is visible
     }
 
     datesContainer.appendChild(dateDiv);
@@ -543,14 +695,14 @@ function renderCalendar(date) {
 prevBtn.addEventListener('click', () => {
   if (currentUser) {
       currentDate.setMonth(currentDate.getMonth() - 1);
-      renderCalendar(currentDate);
+      refreshAll();
   }
 });
 
 nextBtn.addEventListener('click', () => {
   if (currentUser) {
       currentDate.setMonth(currentDate.getMonth() + 1);
-      renderCalendar(currentDate);
+      refreshAll();
   }
 });
 
@@ -559,7 +711,7 @@ activeTab.addEventListener('click', () => {
       showingCompleted = false;
       activeTab.classList.add('active');
       completedTab.classList.remove('active');
-      renderEventList();
+      refreshAll();
   }
 });
 
@@ -568,7 +720,7 @@ completedTab.addEventListener('click', () => {
       showingCompleted = true;
       completedTab.classList.add('active');
       activeTab.classList.remove('active');
-      renderEventList();
+      refreshAll();
   }
 });
 
@@ -620,20 +772,53 @@ function showTaskDetails(taskId, isEditMode = false) {
                 <input type="text" id="edit-category" value="${task.category || ''}"><br><br>
                 <label for="edit-due-date">Due Date:</label>
                 <input type="date" id="edit-due-date" value="${task.due_date}"><br><br>
+                <label for="edit-task-time">Time:</label>
+                <input type="time" id="edit-task-time" value="${task.task_time || ''}"><br><br>
+
                 <label for="edit-recurring">Recurring:</label>
                 <input type="checkbox" id="edit-recurring" ${task.recurring ? 'checked' : ''}><br>
                 <div id="edit-recurring-options" style="display: ${task.recurring ? 'block' : 'none'}; margin-left: 20px;">
                     <label for="edit-recurring-pattern">Repeat:</label>
                     <select id="edit-recurring-pattern">
+                        <option value="" ${!task.recurring_pattern ? 'selected' : ''}>None</option>
                         <option value="weekly" ${task.recurring_pattern === 'weekly' ? 'selected' : ''}>Weekly</option>
                         <option value="monthly" ${task.recurring_pattern === 'monthly' ? 'selected' : ''}>Monthly</option>
+                        // Add more recurring options as needed
                     </select>
                 </div><br>
+
+                <label>Reminder:</label><br>
+                <div style="margin-left: 20px;">
+                    <label for="reminder-number">Remind me</label>
+                    <input type="number" id="reminder-number" value="${task.reminder_number || ''}" style="width: 50px;">
+                    <select id="reminder-interval">
+                        <option value="minutes" ${task.reminder_interval === 'minutes' ? 'selected' : ''}>minutes</option>
+                        <option value="hours" ${task.reminder_interval === 'hours' ? 'selected' : ''}>hours</option>
+                        <option value="days" ${task.reminder_interval === 'days' ? 'selected' : ''}>days</option>
+                    </select>
+                    before due date/time
+                </div><br>
+
                 <label for="upload-file">Upload File:</label>
                 <input type="file" id="upload-file" data-task-id="${task.Task_ID}"><br><br>
                 <button id="save-changes-btn" data-task-id="${task.Task_ID}">Save Changes</button>
                 <button id="delete-task-btn" data-task-id="${task.Task_ID}">Delete Task</button>
             `;
+
+            // Add event listener to toggle recurring options visibility
+            setTimeout(() => {
+                const recurringCheckbox = document.getElementById('edit-recurring');
+                const recurringOptionsDiv = document.getElementById('edit-recurring-options');
+                if (recurringCheckbox && recurringOptionsDiv) {
+                    recurringCheckbox.addEventListener('change', () => {
+                        recurringOptionsDiv.style.display = recurringCheckbox.checked ? 'block' : 'none';
+                        if (!recurringCheckbox.checked) {
+                            document.getElementById('edit-recurring-pattern').value = ''; // Reset pattern if not recurring
+                        }
+                    });
+                }
+            }, 0);
+
         } else {
             let fileDisplayHTML = '';
             if (task.file_url && task.file_name) {
@@ -654,51 +839,31 @@ function showTaskDetails(taskId, isEditMode = false) {
                 fileDisplayHTML = '<strong>Attached File:</strong> No file uploaded';
             }
 
+            let reminderDisplay = 'No reminder set';
+            if (task.reminder_number && task.reminder_interval) {
+                reminderDisplay = `Remind ${task.reminder_number} ${task.reminder_interval} before due date/time`;
+            }
+
             detailsContent = `
                 <h3>${task.title || 'Unnamed'}</h3>
                 ${checklistHTML}
                 <p class="event-description" style="display: ${localStorage.getItem('display-description') !== 'false' ? 'block' : 'none'};"><strong>Description:</strong> ${task.description || 'None'}</p>
                 <p class="event-category" style="display: ${localStorage.getItem('display-category') !== 'false' ? 'block' : 'none'};"><strong>Category:</strong> ${task.category || 'Uncategorized'}</p>
                 <p class="event-date" style="display: ${localStorage.getItem('display-date') !== 'false' ? 'block' : 'none'};"><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
+                ${task.task_time ? `<p><strong>Time:</strong> ${new Date(`${task.due_date}T${task.task_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>` : ''}
                 <div id="file-display-${task.Task_ID}" class="event-file" style="display: ${localStorage.getItem('display-file') !== 'false' ? 'block' : 'none'};">
                     ${fileDisplayHTML}
                 </div>
                 ${task.recurring ? `<p><strong>Recurring:</strong> Yes (${task.recurring_pattern})</p>` : ''}
+                <p><strong>Reminder:</strong> ${reminderDisplay}</p>
                 <button id="edit-task-btn" data-task-id="${task.Task_ID}">Edit</button>
             `;
         }
-        
 
         taskDetailsContent.innerHTML = detailsContent;
         taskDetailsSection.style.display = 'block';
 
-        // Add event listener for the "Display Options" button
-        const displayOptionsButton = document.getElementById(`display-options-btn-${taskId}`);
-        const displayOptionsChecklist = document.getElementById(`display-options-checklist-${taskId}`);
-
-        if (displayOptionsButton && displayOptionsChecklist) {
-            displayOptionsButton.addEventListener('click', (event) => {
-                displayOptionsChecklist.style.display = displayOptionsChecklist.style.display === 'none' ? 'block' : 'none';
-                // Close other open checklists if needed
-            });
-
-            // Event listeners for the checkboxes in the checklist
-            options.forEach(option => {
-                const checkbox = document.getElementById(`display-${option.property}-${taskId}`);
-                if (checkbox) {
-                    checkbox.addEventListener('change', (event) => {
-                        const property = event.target.dataset.property;
-                        const taskId = event.target.dataset.taskId;
-                        const elementsToToggle = taskDetailsContent.querySelectorAll(`.${option.className}`);
-                        elementsToToggle.forEach(el => {
-                            el.style.display = event.target.checked ? 'block' : 'none';
-                        });
-                        localStorage.setItem(`display-${property}`, event.target.checked);
-                    });
-                }
-            });
-        }
-
+        // ... (rest of your event listeners for display options) ...
 
         // Add event listeners for the main action buttons *after* setting innerHTML
         if (isEditMode) {
@@ -758,41 +923,37 @@ function showTaskDetails(taskId, isEditMode = false) {
     }
 }
 
-async function saveTaskChanges(taskId) {
-    if (!currentUser || !taskId) return;
+async function saveTaskChanges(taskIdToUpdate) {
+    if (!currentUser) return;
 
     const updatedTask = {
         title: document.getElementById('edit-title').value,
         description: document.getElementById('edit-description').value,
         category: document.getElementById('edit-category').value,
         due_date: document.getElementById('edit-due-date').value,
+        task_time: document.getElementById('edit-task-time').value || null,
         recurring: document.getElementById('edit-recurring').checked,
-        recurring_pattern: document.getElementById('edit-recurring').checked
-            ? document.getElementById('edit-recurring-pattern').value
-            : null,
-        Username: currentUser
+        recurring_pattern: document.getElementById('edit-recurring').checked ? document.getElementById('edit-recurring-pattern').value : null,
+        reminder_number: document.getElementById('reminder-number').value ? parseInt(document.getElementById('reminder-number').value) : null,
+        reminder_interval: document.getElementById('reminder-number').value ? document.getElementById('reminder-interval').value : null,
     };
 
     const { error } = await db
         .from('Tasks')
         .update(updatedTask)
-        .eq('Task_ID', taskId);
+        .eq('Task_ID', taskIdToUpdate);
 
     if (error) {
         console.error('Update error:', error);
-        alert('Failed to save changes.');
     } else {
-        console.log('Task updated:', taskId, updatedTask);
-        // Update the task in the allEvents array
-        const index = allEvents.findIndex(task => task.Task_ID === taskId);
+        const index = allEvents.findIndex(task => task.Task_ID === taskIdToUpdate);
         if (index !== -1) {
             allEvents[index] = { ...allEvents[index], ...updatedTask };
         }
-        renderEventList();
-        renderCalendar(currentDate);
-
-        // Instead of clearing and hiding, show the view-only version
-        showTaskDetails(taskId, false);
+        refreshAll();
+        renderDayDetails(selectedDate); // Refresh day details if visible
+        taskDetailsContent.innerHTML = ''; // Clear the details view
+        taskDetailsSection.style.display = 'none'; // Hide the details section
     }
 }
 
@@ -1115,4 +1276,253 @@ function updateProgressBar() {
     progressFill.style.width = percent + '%';
     progressText.textContent = `${percent}% Complete`;
 }
+
+const dayDetailsSection = document.getElementById('dayDetailsSection');
+const dayTabsContainer = document.getElementById('dayTabs');
+const dayDetailsContent = document.getElementById('dayDetailsContent');
+const displayedDays = {}; // Object to store details of displayed days { 'YYYY-MM-DD': { tasks: [], scheduleBlocks: [] } }
+let activeDayTab = null; // Keep track of the currently active day detail tab
+
+// Function to display details for a specific day
+async function showDayDetails(date) {
+    if (!currentUser) return;
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+
+    if (!displayedDays[formattedDate]) {
+        const tasksForDay = allEvents.filter(event => !event.completed && event.due_date === formattedDate);
+        const scheduleBlocksForDay = allScheduleBlocks.filter(block => {
+            const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+            return block.Days.includes(dayName);
+        });
+        displayedDays[formattedDate] = { tasks: tasksForDay, scheduleBlocks: scheduleBlocksForDay };
+        refreshAll();
+    }
+
+    setActiveDayTab(formattedDate);
+    renderDayDetails(formattedDate);
+}
+
+function renderDayTabs() {
+    dayTabsContainer.innerHTML = '';
+    for (const date in displayedDays) {
+        const tab = document.createElement('div');
+        tab.classList.add('day-tab');
+        tab.textContent = formatDateForDisplay(date);
+        tab.dataset.date = date;
+        if (date === activeDayTab) {
+            tab.classList.add('active');
+        }
+        const closeButton = document.createElement('button');
+        closeButton.classList.add('close-tab-btn');
+        closeButton.textContent = 'x';
+        closeButton.onclick = (event) => {
+            event.stopPropagation(); // Prevent tab switch
+            removeDayTab(date);
+        };
+        tab.appendChild(closeButton);
+        tab.addEventListener('click', () => setActiveDayTab(date));
+        dayTabsContainer.appendChild(tab);
+    }
+}
+
+function setActiveDayTab(date) {
+    activeDayTab = date;
+    refreshAll(); // Re-render tabs to update active state
+    renderDayDetails(date);
+}
+
+function removeDayTab(dateToRemove) {
+    delete displayedDays[dateToRemove];
+    if (activeDayTab === dateToRemove && Object.keys(displayedDays).length > 0) {
+        activeDayTab = Object.keys(displayedDays)[0]; // Set first remaining tab as active
+    } else if (Object.keys(displayedDays).length === 0) {
+        activeDayTab = null;
+        dayDetailsContent.innerHTML = '<p>Click on a day to see its details here.</p>';
+    }
+    refreshAll();
+    if (activeDayTab) {
+        renderDayDetails(activeDayTab);
+    }
+}
+
+function renderDayDetails(date) {
+    dayDetailsContent.innerHTML = '';
+    if (displayedDays[date]) {
+        const { tasks, scheduleBlocks } = displayedDays[date];
+
+        const dayDetailsTimeline = document.createElement('div');
+        dayDetailsTimeline.id = 'dayDetailsTimeline';
+        dayDetailsContent.appendChild(dayDetailsTimeline);
+
+        // Create the 24-hour slots
+        for (let hour = 0; hour < 24; hour++) {
+            const hourSlot = document.createElement('div');
+            hourSlot.classList.add('timeline-hour');
+            hourSlot.dataset.hour = hour;
+            hourSlot.style.setProperty('--hour', hour);
+            const hourLabel = document.createElement('div');
+            hourLabel.classList.add('hour-label');
+            hourLabel.textContent = `${String(hour).padStart(2, '0')}:00`;
+            hourSlot.appendChild(hourLabel);
+            dayDetailsTimeline.appendChild(hourSlot);
+        }
+
+        // Function to position events on the timeline
+        function positionTimelineEvent(element, startTime, title, dueDate) {
+            const [startHour, startMinute] = startTime.split(':').map(Number);
+            const startTimeInMinutes = startHour * 60 + startMinute;
+            const totalDayMinutes = 24 * 60;
+
+            // Calculate the top position as a percentage of the timeline height
+            const topPositionPercentage = (startTimeInMinutes / totalDayMinutes) * 100;
+            element.style.top = `${topPositionPercentage}%`;
+
+            // Calculate a rough height (you might need more sophisticated logic based on typical task duration)
+            const defaultDurationMinutes = 80;
+            const heightPercentage = (defaultDurationMinutes / totalDayMinutes) * 100;
+            element.style.height = `${heightPercentage}%`;
+
+            let timeStr = 'No Time Set';
+            if (startTime) {
+                const dateTime = new Date(`${dueDate}T${startTime}`);
+                timeStr = dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            element.textContent = `${title} (${timeStr})`;
+        }
+
+        // Display Schedule Blocks
+        if (scheduleBlocks.length > 0) {
+            scheduleBlocks.forEach(block => {
+                const blockElement = document.createElement('div');
+                blockElement.classList.add('timeline-event', 'schedule-block-event');
+                const [startHour, startMinute] = block.Start_Time.split(':').map(Number);
+                const [endHour, endMinute] = block.End_Time.split(':').map(Number);
+                blockElement.textContent = `${block.Title} (${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}-${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')})`;
+
+                const startTimeInMinutes = startHour * 60 + startMinute;
+                const endTimeInMinutes = endHour * 60 + endMinute;
+                const totalDayMinutes = 24 * 60;
+                const topPositionPercentage = (startTimeInMinutes / totalDayMinutes) * 100;
+                const heightPercentage = ((endTimeInMinutes - startTimeInMinutes) / totalDayMinutes) * 100;
+
+                blockElement.style.top = `${topPositionPercentage}%`;
+                blockElement.style.height = `${heightPercentage}%`;
+
+                dayDetailsTimeline.appendChild(blockElement);
+            });
+        }
+
+        // Display Tasks
+        if (tasks.length > 0) {
+            tasks.forEach(task => {
+                if (task.task_time) {
+                    const taskElement = document.createElement('div');
+                    taskElement.classList.add('timeline-event', 'task-event');
+                    positionTimelineEvent(taskElement, task.task_time, task.title, task.due_date);
+                    dayDetailsTimeline.appendChild(taskElement);
+                } else {
+                    const allDayTaskElement = document.createElement('div');
+                    allDayTaskElement.classList.add('timeline-event', 'task-event', 'all-day-task');
+                    allDayTaskElement.textContent = task.title + ' (All Day)';
+                    dayDetailsTimeline.appendChild(allDayTaskElement);
+                }
+            });
+        }
+
+        if (scheduleBlocks.length === 0 && tasks.length === 0) {
+            dayDetailsContent.innerHTML = '<p>No events or tasks for this day.</p>';
+        }
+    }
+}
+
+function refreshAll() {
+    renderCalendar(currentDate); // Re-render the main calendar
+    renderEventList();
+    renderDayTabs();
+
+
+}
+
+function formatDateForDisplay(dateString) {
+    const parts = dateString.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+    const day = parseInt(parts[2], 10);
+
+    const date = new Date(year, month, day); // Creates a date in the local timezone
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// Get the current date and show details on load
+showDayDetails(currentDate);
+
+const toggleDragButton = document.getElementById('toggleDragButton');
+const resetPositionsButton = document.getElementById('resetPositionsButton');
+let isDraggingEnabled = false;
+
+const draggableElements = ['.calendar', '#taskContainer', '#dayDetailsSection'];
+
+// Store initial positions on load
+document.addEventListener('DOMContentLoaded', () => {
+    draggableElements.forEach(selector => {
+        const element = document.querySelector(selector);
+        element.setAttribute('data-initial-x', 0);
+        element.setAttribute('data-initial-y', 0);
+        element.style.transform = 'translate(0px, 0px)'; // Ensure transform is initially set
+    });
+});
+
+toggleDragButton.addEventListener('click', () => {
+    isDraggingEnabled = !isDraggingEnabled;
+    toggleDragButton.textContent = isDraggingEnabled ? 'Disable Tab Movement' : 'Enable Tab Movement';
+
+    draggableElements.forEach(selector => {
+        if (isDraggingEnabled) {
+            interact(selector)
+              .draggable({
+                inertia: true,
+                modifiers: [
+                  interact.modifiers.restrictRect({
+                    restriction: 'window',
+                    endOnly: true
+                  })
+                ],
+                autoScroll: true,
+                onmove: dragMoveListener,
+              });
+        } else {
+            interact(selector).unset();
+        }
+    });
+});
+
+resetPositionsButton.addEventListener('click', () => {
+    draggableElements.forEach(selector => {
+        const element = document.querySelector(selector);
+        const initialX = parseFloat(element.getAttribute('data-initial-x')) || 0;
+        const initialY = parseFloat(element.getAttribute('data-initial-y')) || 0;
+
+        element.style.transform = `translate(${initialX}px, ${initialY}px)`;
+        element.setAttribute('data-x', initialX);
+        element.setAttribute('data-y', initialY);
+    });
+});
+
+function dragMoveListener (event) {
+  var target = event.target
+  var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx
+  var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy
+
+  target.style.transform = 'translate(' + x + 'px, ' + y + 'px)'
+  target.setAttribute('data-x', x)
+  target.setAttribute('data-y', y)
+}
+
+window.dragMoveListener = dragMoveListener
+
+
 
