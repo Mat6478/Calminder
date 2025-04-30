@@ -75,6 +75,11 @@
 
       
     <div class="main-container">
+        <div id="move">
+            <button id="toggleDragButton">Enable tab movement</button>
+            <button id="resetPositionsButton">Reset Positions</button>
+        </div>
+
         <div id="taskContainer" class="draggable resizable">
             <div id="progressContainer">
                 <div id="progressBar">
@@ -110,7 +115,15 @@
             </div>
             <div class="dates" id="dates"></div>
         </div>
-
+        
+        <div id="dayDetailsSection">
+            <div id="dayTabs">
+                </div>
+            <div id="dayDetailsContent">
+                <p>Click on a day to see its details here.</p>
+            </div>
+        </div>
+    
         <div id="taskDetailsSection">
             <h2>Task Details</h2>
             <div id="taskDetailsContent">
@@ -123,7 +136,23 @@
         <button id="clearReportsBtn" class="report-btn">Clear Weekly Reports</button>
     </div>
 
+
     <div id="eventModal" class="modal" style="display: none;">
+        <div class="modal-content" id="modalContent">
+            <span id="closeModal" class="close">&times;</span>
+            <h2 id="modalTitle">Add Task</h2>
+            <p id="selectedDate"></p>
+            <input type="text" id="eventTitle" placeholder="Task Title" />
+            <textarea id="eventDescription" placeholder="Task Description"></textarea>
+            <textarea id="eventCategory" placeholder="Task Category"></textarea>
+            <label for="taskTime">Time:</label>
+            <input type="time" id="taskTime">
+    
+            <button id="saveEvent">Save Task</button>
+            <button id="deleteEvent" style="display: none;">Delete Task</button>
+        </div>
+    </div>
+    <!-- <div id="eventModal" class="modal" style="display: none;">
         <div class="modal-content" id="modalContent">
             <span id="closeModal" class="close">&times;</span>
             <h2 id="modalTitle">Add Event</h2>
@@ -158,8 +187,10 @@
                 </select>
             </div>
         </div>
-    </div>
+    </div> -->
 
+
+    
     <div id="weeklyReportModal" class="modal" style="display: none;">
         <div class="modal-content">
         <span id="closeReportModal" class="close">&times;</span>
@@ -199,12 +230,12 @@
     </div>
   </div>
   
+  
 </body>
 
 </html>
 
-
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.21/dist/interact.min.js"></script>    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="main.js"></script>
-
 
