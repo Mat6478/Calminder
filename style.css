@@ -16,15 +16,100 @@ body {
 }
 
 .calendar {
-    width: 500px;
+    width: 1000px; /* Increased overall calendar width */
     height: auto;
     display: flex;
     flex-direction: column;
-    padding: 10px;
+    padding: 15px; /* Slightly increased padding */
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    margin-right: 20px;
+    margin-right: 10px;
+}
+
+.dates {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: minmax(120px, auto); /* Increased minimum row height */
+    gap: 8px; /* Slightly increased gap for visual separation */
+    border-left: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+.date-box { /* Consistent styling for all date boxes */
+    display: flex;
+    flex-direction: column; /* Stack day number and events */
+    align-items: flex-start; /* Align content to the left */
+    padding: 10px; /* Increased padding for more space inside */
+    margin: auto;
+    cursor: pointer;
+    font-weight: 600;
+    border-radius: 8px; /* Slightly less round */
+    width: 100%; /* Take full width of the grid cell */
+    height: auto; /* Let content determine height, but min is set by grid */
+    min-height: 100px; /* Ensured minimum height matches grid row height */
+    border-top: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    overflow: hidden; /* Hide event titles that go beyond the box */
+    box-sizing: border-box; /* Ensure padding doesn't increase size */
+    transition: background 0.2s;
+    background-color: #fff; /* Default background for all boxes */
+    color: #333; /* Default text color */
+}
+
+.date-box:hover,
+.date-box.active {
+    background: #FFC5D3; /* Hover and active color remain the same */
+    color: #fff;
+}
+
+.date-box.active .day-number { /* Style day number in active state */
+    color: white;
+}
+
+.date-box.inactive {
+    color: #d2d2d2;
+    background: #f9f9f9; /* Light background for inactive dates */
+    border-color: #f9f9f9;
+}
+
+.date-box.inactive:hover {
+    color: #fff;
+    background: #FFC5D3;
+    border-color: #FFC5D3;
+}
+
+.day-number {
+    font-size: 1.2em; /* Slightly larger day number */
+    font-weight: bold;
+    margin-bottom: 6px; /* More space below day number */
+    color: inherit; /* Inherit color from .date-box */
+}
+
+.event-indicator {
+    background-color: #ffeb3b; /* Default color */
+    color: black;
+    font-size: 0.8em; /* Slightly larger event text */
+    padding: 3px 6px; /* Slightly increased padding */
+    border-radius: 5px;
+    margin-bottom: 3px; /* More space between events */
+    width: 100%; /* Make them take full width of the box */
+    text-overflow: ellipsis; /* Prevent overflow with ellipsis */
+    white-space: nowrap;
+    box-sizing: border-box;
+    text-align: left; /* Align text within indicator to the left */
+}
+
+/* Style for schedule block label within date box */
+.date-box > div[style*="color: #4f43bd;"] {
+    font-size: 0.7em; /* Slightly larger schedule block text */
+    margin-top: 3px;
+    color: #4f43bd;
+    text-align: left;
+    padding-left: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .header {
@@ -74,40 +159,7 @@ body {
     font-weight: 500;
 }
 
-.dates{
-    display: grid;
-    grid-template-columns: repeat(7, 1fr) ;
-    gap: 5px;
-}
 
-.date{
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 10px;
-    margin: auto;
-    cursor: pointer;
-    font-weight: 600;
-    border-radius: 50%;
-    width:40px;
-    height: 40px;
-    transition: 0.2s;
-}
-
-.date:hover,
-.date.active {
-    background: #FFC5D3;
-    color: #fff;
-}
-
-.date.inactive {
-    color: #d2d2d2;
-}
-
-.date.inactive.hover {
-    color: #fff;
-}
 
 /* Modal Styling */
 .modal {
@@ -387,7 +439,7 @@ body {
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
-    margin-right: 20px;
+    margin-right: 0px;
   }
   
   .event-item .delete-btn {
@@ -552,4 +604,158 @@ body {
 /* Button active effect */
 .report-btn:active {
     transform: scale(0.98); /* Shrink effect on click */
+}
+
+#move{
+    position: fixed; 
+    bottom: 20px;      
+    left: 10px;     
+    display: flex;  
+    flex-direction: column; /* Stack the buttons vertically */
+    gap: 10px;     
+    z-index: 1000;
+
+}
+
+#dayDetailsSection {
+    width: 350px; /* Adjust width as needed */
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 15px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+#dayTabs {
+    display: flex;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 10px;
+}
+
+.day-tab {
+    padding: 8px 15px;
+    cursor: pointer;
+    background-color: #eee;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    margin-right: 5px;
+    font-size: 0.9em;
+}
+
+.day-tab.active {
+    background-color: #fff;
+    border-color: #ddd;
+    border-bottom: none;
+    font-weight: bold;
+}
+
+#dayDetailsContent {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.day-details-item {
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    background-color: #fff;
+    font-size: 0.9em;
+}
+
+.day-details-item strong {
+    font-weight: bold;
+}
+
+.attachment-link {
+    display: block;
+    margin-top: 5px;
+    color: #007bff;
+    text-decoration: none;
+}
+
+.attachment-link:hover {
+    text-decoration: underline;
+}
+
+.close-tab-btn {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    margin-left: 8px;
+    font-size: 1em;
+    vertical-align: middle;
+}
+
+.close-tab-btn:hover {
+    color: #c82333;
+}
+
+#dayDetailsTimeline {
+    position: relative;
+    height: 600px; /* Adjust as needed */
+    border-left: 1px solid #ccc;
+    padding-left: 50px;
+}
+
+.timeline-hour {
+    position: absolute;
+    top: calc(var(--hour) / 24 * 100%);
+    width: 100%;
+    height: calc(1 / 24 * 100%);
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 5px;
+    box-sizing: border-box;
+}
+
+.timeline-hour:last-child {
+    border-bottom: none;
+}
+
+.hour-label {
+    position: absolute;
+    left: -45px;
+    font-size: 0.8em;
+    color: #777;
+}
+
+.timeline-event {
+    position: absolute;
+    left: 50px;
+    width: calc(100% - 20px);
+    background-color: #e0f7fa;
+    border: 1px solid #b2ebf2;
+    border-radius: 5px;
+    padding: 5px;
+    font-size: 0.8em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
+    z-index: 1;
+    margin-top: 2px; /* Add some top margin for separation */
+}
+
+.schedule-block-event {
+    background-color: #d1c4e9;
+    border-color: #b39ddb;
+}
+
+.task-event {
+    background-color: #fffde7;
+    border-color: #fff9c4;
+}
+
+.task-event.all-day-task {
+    position: relative;
+    margin-top: 5px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    z-index: 0;
 }
