@@ -1106,20 +1106,27 @@ function updateStreakUI() {
 }
 
 function generateWeeklyReport() {
-    const taskDetailsSection = document.getElementById('taskDetailsSection'); // Get taskDetailsSection
+    const taskDetailsSection = document.getElementById('taskDetailsSection');
     if (taskDetailsSection) {
-        taskDetailsSection.style.display = 'none'; // Safely hide it
+        taskDetailsSection.style.display = 'none';
     }
 
     const now = new Date();
+
+    // Define start and end of the current week (Sunday to Saturday)
     const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
     startOfWeek.setHours(0, 0, 0, 0);
 
+    const endOfWeek = new Date(now);
+    endOfWeek.setDate(now.getDate() + (6 - now.getDay())); // Saturday
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    // Filter completed tasks within the current week
     const completedThisWeek = allEvents.filter(task => {
         if (!task.completed) return false;
-        const taskDate = new Date(task.due_date);
-        return taskDate >= startOfWeek && taskDate <= now;
+        const taskDate = new Date(task.due_date + "T00:00:00"); // Normalize date
+        return taskDate >= startOfWeek && taskDate <= endOfWeek;
     });
 
     const totalCompletedThisWeek = completedThisWeek.length;
@@ -1130,37 +1137,17 @@ function generateWeeklyReport() {
         <p><strong>Current Streak:</strong> ${currentStreak} day${currentStreak !== 1 ? 's' : ''}</p>
     `;
 
+    // Store weekly report in localStorage
     const reports = JSON.parse(localStorage.getItem('weeklyReports') || '[]');
-
-reports.push({
-    weekStart: startOfWeek.toDateString(),
-    weekEnd: now.toDateString(),
-    tasksCompleted: totalCompletedThisWeek,
-    streak: currentStreak
-});
-
-localStorage.setItem('weeklyReports', JSON.stringify(reports));
-
-    document.getElementById('weeklyReportContent').innerHTML = reportHtml;
-    document.getElementById('weeklyReportModal').style.display = 'flex';
-}
-
-function viewAllWeeklyReports() {
-    const reports = JSON.parse(localStorage.getItem('weeklyReports') || '[]');
-    if (reports.length === 0) {
-        alert("No reports found yet!");
-        return;
-    }
-
-    let reportText = "Past Weekly Reports:\n\n";
-
-    reports.forEach((r, index) => {
-        reportText += `Week ${index + 1} (${r.weekStart} ➔ ${r.weekEnd}):\n`;
-        reportText += `- Tasks Completed: ${r.tasksCompleted}\n`;
-        reportText += `- Streak: ${r.streak} day${r.streak !== 1 ? 's' : ''}\n\n`;
+    reports.push({
+        weekStart: startOfWeek.toDateString(),
+        weekEnd: endOfWeek.toDateString(),
+        tasksCompleted: totalCompletedThisWeek,
+        streak: currentStreak
     });
-
-    alert(reportText);
+    localStorage.setItem('weeklyReports', JSON.stringify(reports));
+    
+    alert("Weekly report generated successfully!");
 }
 
 function viewAllWeeklyReports() {
@@ -1193,12 +1180,13 @@ function viewAllWeeklyReports() {
     }
 }
 
-function clearWeeklyReports() { //clear weekly reports
+function clearWeeklyReports() {
     if (confirm("Are you sure you want to clear all weekly reports?")) {
         localStorage.removeItem('weeklyReports');
         alert("All weekly reports have been cleared!");
     }
 }
+
 
 
 // Initially hide the task details section
