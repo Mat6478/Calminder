@@ -4,7 +4,7 @@ To get started copy this link and paste it into your browser!
 
 http://raysphereconsulting.com/
 
-Calminder is feature-rich and user-friendly calendar and reminder app designed to help users plan efficiently, stay organized, and stay motivated through powerful scheduling, task management, and productivity tools.
+Calminder is a feature-rich and user-friendly calendar and reminder app designed to help users plan efficiently, stay organized, and stay motivated through powerful scheduling, task management, and productivity tools.
 
 Features:
 
